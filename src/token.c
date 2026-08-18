@@ -12,7 +12,7 @@ struct Token token_alloc(char *str, int type) {
 
   if (str != NULL) {
     hstr = malloc(len + 1);
-}
+  }
 
   if (hstr != NULL) {
     // allocation successful
