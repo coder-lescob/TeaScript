@@ -55,7 +55,7 @@ struct Token lexer_consume_token(struct Lexer *lexer) {
 /**
  * gets the next token without consuming it
  */
-struct Token lexer_peak_token(struct Lexer *lexer) {
+struct Token lexer_peek_token(struct Lexer *lexer) {
   struct Lexer sacrificial_lexer = CREATE_LEXER(lexer->consume_ptr);
   return lexer_consume_token(&sacrificial_lexer);
 }
