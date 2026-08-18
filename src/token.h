@@ -14,6 +14,8 @@ enum {
    * TODO: add keywords tokens
    */
 
+  TOKEN_IDENTIFIER,
+
   TOKEN_INT_LITERAL,
   TOKEN_FLOAT_LITERAL,
 

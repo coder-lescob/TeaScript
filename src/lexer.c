@@ -1,6 +1,12 @@
 #include "lexer.h"
 #include "token.h"
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>
+#include <string.h>
+#include <stdbool.h>
+
 #define TOKEN_BUFFER_SIZE (512)
 
 /**
@@ -40,6 +46,7 @@ struct Token lexer_consume_token(struct Lexer *lexer) {
   // remove the last letter
   if (buf_len > 0) {
     buf[--buf_len] = 0;
+    lexer->consume_ptr--;
   }
 
   return token_alloc(buf, classify_token(buf, buf_len));
@@ -53,10 +60,29 @@ struct Token lexer_peak_token(struct Lexer *lexer) {
   return lexer_consume_token(&sacrificial_lexer);
 }
 
+static bool is_identifier(char *buf, int buf_len) {
+  if (buf_len == 0) return false;
+
+  if (!isalpha(buf[0]) && buf[0] != '_')
+    return false;
+
+  for (; *buf != 0; buf++) {
+    if (!isalpha(*buf) && !isdigit(*buf) && buf[0] != '_') {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 /**
  * classifies a token from a string
  */
 int classify_token(char *buf, int buf_len) {
+  if (is_identifier(buf, buf_len)) {
+    return TOKEN_IDENTIFIER;
+  }
+
   if (buf_len == 2 && buf[1] == '=') {
     switch (buf[0]) {
       case '=': return TOKEN_EQUALITY;
@@ -74,8 +100,8 @@ int classify_token(char *buf, int buf_len) {
 
   if (buf_len == 2 && buf[0] == buf[1]) {
     switch (buf[0]) {
-      case '+': TOKEN_INC;
-      case '-': TOKEN_DEC;
+      case '+': return TOKEN_INC;
+      case '-': return TOKEN_DEC;
     }
   }
 
@@ -85,7 +111,7 @@ int classify_token(char *buf, int buf_len) {
       case '-': return TOKEN_SUB;
       case '*': return TOKEN_MUL;
       case '/': return TOKEN_DIV;
-      case '&': return TOKEN_BITAN;
+      case '&': return TOKEN_BITAND;
       case '|': return TOKEN_BITOR;
       case '^': return TOKEN_BITXOR;
       case '!': return TOKEN_ESCLAM;

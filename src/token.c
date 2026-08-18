@@ -1,5 +1,6 @@
 #include "token.h"
 
+#include <stdlib.h>
 #include <string.h>
 
 /**
@@ -25,7 +26,7 @@ struct Token token_alloc(char *str, int type) {
     .word = hstr,
     // if allocation failed the token ain't valid anymore
     .type = (hstr == NULL)? TOKEN_ILLEGAL : type,
-  }
+  };
 }
 
 /**

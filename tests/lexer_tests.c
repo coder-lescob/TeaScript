@@ -1,0 +1,70 @@
+#include <stdio.h>
+#include <string.h>
+#include <token.h>
+#include <lexer.h>
+#include <stdint.h>
+#include "test.h"
+
+int consume_consums_the_right_len() {
+  char *original = "hello, hello, how are you today";
+  struct Lexer lexer = CREATE_LEXER(original);
+  
+  // consume first token shall be hello
+  struct Token first_token = lexer_consume_token(&lexer);
+
+  if (lexer.consume_ptr - original != (int16_t)strlen(first_token.word)) {
+    printf("expected to consume: %ld consumed: %ld", strlen(first_token.word), lexer.consume_ptr - original);
+    printf("original ptr = %s, after consuming = %s\n", original, lexer.consume_ptr);
+
+    token_free(&first_token);
+    return -1;
+  }
+
+  token_free(&first_token);
+
+  return 0;
+}
+
+int peak_does_not_consum() {
+  char *original = "hello, hello, how are you today";
+  struct Lexer lexer = CREATE_LEXER(original);
+  
+  // consume first token shall be hello
+  struct Token first_token = lexer_peak_token(&lexer);
+
+  if (lexer.consume_ptr - original != 0) {
+    printf("expected to consume: 0 consumed: %ld", lexer.consume_ptr - original);
+    printf("original ptr = %s, after consuming = %s\n", original, lexer.consume_ptr);
+
+    token_free(&first_token);
+    return -1;
+  }
+
+  token_free(&first_token);
+
+  return 0;
+}
+
+int lexer_tokenizes_identifier() {
+  struct Lexer lexer = CREATE_LEXER("hello, 123, hello");
+  struct Token token = lexer_consume_token(&lexer);
+
+  if (strncmp(token.word, "hello", strlen(token.word)) != 0) {
+    return -1;
+  }
+
+  if (token.type != TOKEN_IDENTIFIER) {
+    return -1;
+  }
+
+  return 0;
+}
+
+int main(void) {
+  TEST(consume_consums_the_right_len);
+  TEST(peak_does_not_consum);
+  TEST(lexer_tokenizes_identifier);
+
+  printf("\n");
+  return 0;
+}
