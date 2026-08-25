@@ -3,6 +3,9 @@
 #include <errno.h>
 #include <string.h>
 
+#include "token.h"
+#include "lexer.h"
+
 char *file_read_all(char *path);
 
 int main(int argc, char **argv) {
@@ -18,7 +21,19 @@ int main(int argc, char **argv) {
     return -1;
   }
   
-  printf("%s\n", code);
+  struct Lexer lexer = CREATE_LEXER(code);
+  struct Token token;
+  
+  int i;
+  for (i = 0; (token = lexer_consume_token(&lexer)).type != TOKEN_EOF && i < 500; i++) {
+    //printf("%p\n", lexer.consume_ptr);
+    if (strcmp(token.word, "") == 0) continue;
+    printf("%s type: %d\n", token.word, token.type);
+  }
+
+  if (i == 50) {
+    printf("end");
+  }
 
   free(code);
 

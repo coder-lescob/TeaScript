@@ -46,17 +46,20 @@ int peak_does_not_consum() {
 }
 
 int lexer_tokenizes_identifier() {
-  struct Lexer lexer = CREATE_LEXER("hello, 123, hello");
+  struct Lexer lexer = CREATE_LEXER("use std;");
   struct Token token = lexer_consume_token(&lexer);
 
-  if (strncmp(token.word, "hello", strlen(token.word)) != 0) {
+  if (strncmp(token.word, "use", strlen(token.word)) != 0) {
+    token_free(&token);
     return -1;
   }
 
   if (token.type != TOKEN_IDENTIFIER) {
+    token_free(&token);
     return -1;
   }
-
+  
+  token_free(&token);
   return 0;
 }
 
@@ -65,7 +68,9 @@ int last_token_is_eof() {
   struct Token token;
 
   int i;
-  for (i = 0; i < 50 && (token = lexer_consume_token(&lexer)).type != TOKEN_EOF; i++);
+  for (i = 0; i < 50 && (token = lexer_consume_token(&lexer)).type != TOKEN_EOF; i++) {
+    token_free(&token);
+  }
 
   if (i == 50) {
     printf("got %s of type: %d\n", token.word, token.type);
@@ -75,11 +80,31 @@ int last_token_is_eof() {
   return 0;
 }
 
+int ending_with_semi_colon_is_illegal() {
+  struct Lexer lexer = CREATE_LEXER("std;\n woaw");
+
+  struct Token token = lexer_consume_token(&lexer);
+
+  if (strcmp(token.word, "std") > 0) {
+    token_free(&token);
+    return -1;
+  }
+
+  token_free(&token);
+
+  return 0;
+}
+
+int std_semi_colon_is_illegal() {
+  return (classify_token("std;", strlen("std;")) == TOKEN_ILLEGAL)? 0 : -1;
+}
+
 int main(void) {
   TEST(consume_consums_the_right_len);
   TEST(peak_does_not_consum);
   TEST(lexer_tokenizes_identifier);
   TEST(last_token_is_eof);
+  TEST(ending_with_semi_colon_is_illegal);
 
   printf("\n");
   return 0;

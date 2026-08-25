@@ -1,10 +1,11 @@
 CC := gcc
+DB := gdb
 
 BUILD := build
 SRC   := src
 TEST  := tests
 
-CFLAGS := -Wall -Wextra -Wpedantic -I$(SRC)
+CFLAGS := -Wall -Wextra -Wpedantic -I$(SRC) -g
 LDFLAGS := 
 
 INTERPRETER_SRC := $(wildcard $(SRC)/*.c)

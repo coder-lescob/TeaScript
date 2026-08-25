@@ -26,11 +26,6 @@ struct Token lexer_consume_token(struct Lexer *lexer) {
   char buf[TOKEN_BUFFER_SIZE] = {0};
   int  buf_len = 0;
   bool blank_yet = true;
-  
-  /**
-   * classifies a token from a string
-   */
-  int classify_token(char *buf, int buf_len);
 
   for (; 
     buf_len == 0 || 
@@ -65,10 +60,15 @@ struct Token lexer_consume_token(struct Lexer *lexer) {
   // eof file is reached if and only if the consume cursor of the lexer has reached the eof
   bool eof_reached = is_eof_chr(*lexer->consume_ptr);
 
-  // remove the last letter only if the last fetched character wasn't already a 0 (e.i. end of file)
-  if (buf_len > 0 && !eof_reached) {
+  // remove the last letter only if the last fetched character made the token illegal.
+  if (buf_len > 0 && classify_token(buf, buf_len) == TOKEN_ILLEGAL) {
     buf[--buf_len] = 0;
     lexer->consume_ptr--;
+    
+    // tho if it's still illegal after that it was probably entirely illegal so keep it as illegal.
+    if (classify_token(buf, buf_len) == TOKEN_ILLEGAL) {
+      buf[buf_len++] = *(lexer->consume_ptr++);
+    }
   }
 
   if (eof_reached) {
