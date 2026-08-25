@@ -1,0 +1,56 @@
+use std;
+use stdthread;
+
+const Word: Type = String;
+
+struct Chunk {
+    words: List<String>;
+    frequencies: Map<String, Int>;
+}
+impl {
+    func new(words: List<String>) {
+        return Self { words, Map<String, Int>::from_keys(words, 0) };
+    }
+}
+
+func thread_work(data: ThreadData) {
+    // first data shall be the Chunk
+    let chunk: Chunk = data.dequeue()?;
+
+    for (let i = 0; i < chunk.words.count; i++) {
+        chunk.frequencies[chunk.words[i]]++;
+    }
+
+    data.send_result(chunk.frequencies);
+}
+
+func tokenize(str: String) -> List<Word>: str.split(' ');
+
+func build_chunks(words: List<Word>) -> List<Chunk> {
+    let words_chunks = words.chunk(chunk_size: 500)?;
+    let chunks = List<Chunk>::with_capacity(words_chunks.count)?;
+
+    for (let i = 0; i < words_chunks.count; i++) {
+        chunks.add(Chunk::new(words_chunks[i]))?;
+    }
+
+    return chunks;
+}
+
+func main(args: List<String>) {
+    // read the file and tokenizes it
+    let words = tokenize(File::read_all(args[0]))?;
+
+    // build the chunks
+    let chunks = build_chunks(words)?;
+
+    let threads = Threads::new(thread_work, chunks.count)?;
+    threads.send_threads_data(chunks)?;
+    threads.dispatch_all()?;
+
+    threads.wait_for_all();
+
+    let frequencies = threads.grab_data().merge_items();
+
+    print(frequencies);
+}
