@@ -9,6 +9,14 @@
 
 #define TOKEN_BUFFER_SIZE (512)
 
+static bool is_blank_chr(char c) {
+  return isblank(c) || c == '\n';
+}
+
+static bool is_eof_chr(char c) {
+  return c == 0;
+}
+
 /**
  * gets the next token and consumses it
  */
@@ -17,6 +25,7 @@ struct Token lexer_consume_token(struct Lexer *lexer) {
   // the buffer containing the current token buffer
   char buf[TOKEN_BUFFER_SIZE] = {0};
   int  buf_len = 0;
+  bool blank_yet = true;
   
   /**
    * classifies a token from a string
@@ -38,15 +47,32 @@ struct Token lexer_consume_token(struct Lexer *lexer) {
        */
       break;
     }
+    
+    // the current token is invalid if it has a ' ', '\t' or '\n'
+    // tho if it has not started yet, skip theses
+    if (is_blank_chr(*lexer->consume_ptr)) {
+      if (blank_yet) {
+        continue;
+      }
+      break;
+    }
 
     // push the current letter to the buffer
     buf[buf_len++] = *lexer->consume_ptr;
+    blank_yet = false;
   }
+  
+  // eof file is reached if and only if the consume cursor of the lexer has reached the eof
+  bool eof_reached = is_eof_chr(*lexer->consume_ptr);
 
-  // remove the last letter
-  if (buf_len > 0) {
+  // remove the last letter only if the last fetched character wasn't already a 0 (e.i. end of file)
+  if (buf_len > 0 && !eof_reached) {
     buf[--buf_len] = 0;
     lexer->consume_ptr--;
+  }
+
+  if (eof_reached) {
+    return (struct Token) { .word = NULL, .type = TOKEN_EOF };
   }
 
   return token_alloc(buf, classify_token(buf, buf_len));

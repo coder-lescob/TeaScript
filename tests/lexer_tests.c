@@ -30,7 +30,7 @@ int peak_does_not_consum() {
   struct Lexer lexer = CREATE_LEXER(original);
   
   // consume first token shall be hello
-  struct Token first_token = lexer_peak_token(&lexer);
+  struct Token first_token = lexer_peek_token(&lexer);
 
   if (lexer.consume_ptr - original != 0) {
     printf("expected to consume: 0 consumed: %ld", lexer.consume_ptr - original);
@@ -60,10 +60,26 @@ int lexer_tokenizes_identifier() {
   return 0;
 }
 
+int last_token_is_eof() {
+  struct Lexer lexer = CREATE_LEXER("hello!");
+  struct Token token;
+
+  int i;
+  for (i = 0; i < 50 && (token = lexer_consume_token(&lexer)).type != TOKEN_EOF; i++);
+
+  if (i == 50) {
+    printf("got %s of type: %d\n", token.word, token.type);
+    return -1;
+  }
+
+  return 0;
+}
+
 int main(void) {
   TEST(consume_consums_the_right_len);
   TEST(peak_does_not_consum);
   TEST(lexer_tokenizes_identifier);
+  TEST(last_token_is_eof);
 
   printf("\n");
   return 0;
