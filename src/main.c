@@ -44,7 +44,7 @@ char *file_read_all(char *path) {
     // get the length of the file
     size_t file_len = get_file_len(fd);
 
-    // allocate enough memory
+    // allocate enough memory, 1 more byte for the null terminator
     content = calloc(file_len + 1, sizeof(char));
 
     // copy all the file's content to that allocated string
