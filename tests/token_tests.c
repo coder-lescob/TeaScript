@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <token.h>
+#include <string.h>
 #include "test.h"
 
 int test_allocation() {
@@ -48,11 +49,25 @@ int free_sets_word_to_null() {
   return 0;
 }
 
+int token_type_to_str() {
+  int success = 1;
+
+  #define test_token_type(type) \
+    success &= (strcmp(get_token_type_str(type), #type) == 0)? 1 : 0;
+  
+  TOKEN_TYPES(test_token_type);
+
+  return success? 0 : -1;
+
+  #undef test_token_type
+}
+
 int main(void) {
   TEST(test_allocation);
   TEST(allocation_fails_returns_illegal_token);
   TEST(free_returns_illegal);
   TEST(free_sets_word_to_null);
+  TEST(token_type_to_str);
 
   printf("\n");
   return 0;

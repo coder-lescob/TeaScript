@@ -41,3 +41,17 @@ void token_free(struct Token *token) {
   token->word = NULL;
 }
 
+/**
+ * get the string name for the token type
+ */
+char *get_token_type_str(enum TokenType type) {
+  #define MAKE_ENUM(name) case name: return #name;
+
+  switch (type) {
+    TOKEN_TYPES(MAKE_ENUM)
+    default:
+      return "UNKNOW TOKEN TYPE";
+  }
+
+  #undef MAKE_ENUM
+}

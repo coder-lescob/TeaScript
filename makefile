@@ -36,6 +36,9 @@ build: create_build_dirs $(OBJS)
 
 build_tests: create_build_dirs $(TESTS)
 
+clear:
+	@rm -rf $(BUILD)
+
 test: build_tests
 	@echo -e "testing\n"
 	@for file in $(TESTS); do \

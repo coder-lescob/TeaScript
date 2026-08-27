@@ -6,57 +6,64 @@ struct Token {
   int  type;
 };
 
-enum {
-  TOKEN_ILLEGAL,
-  TOKEN_EOF,
-
+#define TOKEN_TYPES(X) \
+  X(TOKEN_ILLEGAL)     \
+  X(TOKEN_EOF)         \
+                       \
   /**
-   * TODO: add keywords tokens
-   */
+   * TODO: add keywords tokens   
+   */                  \
+                       \
+  X(TOKEN_IDENTIFIER)  \
+                       \
+  X(TOKEN_INT_LITERAL) \
+  X(TOKEN_FLOAT_LITERAL)\
+                       \
+  /* operators: math */\
+  X(TOKEN_ADD)         \
+  X(TOKEN_SUB)         \
+  X(TOKEN_MUL)         \
+  X(TOKEN_DIV)         \
+                       \
+  /* operators: logic */\
+  X(TOKEN_BITAND)      \
+  X(TOKEN_BITOR)       \
+  X(TOKEN_BITXOR)      \
+  X(TOKEN_ESCLAM)      \
+                       \
+  /* operators: shifts */ \
+  X(TOKEN_SHR)           \
+  X(TOKEN_SHL)         \
+                       \
+  /* operators: comparison */ \
+  X(TOKEN_EQUALITY)    \
+  X(TOKEN_BIGGER)      \
+  X(TOKEN_LESS)        \
+  X(TOKEN_BIGEQ)       \
+  X(TOKEN_LESSEQ)        \
+                       \
+  /* assignments */    \
+  X(TOKEN_ASSIGN_EQ)   \
+  X(TOKEN_ASSIGN_ADD)  \
+  X(TOKEN_ASSIGN_SUB)  \
+  X(TOKEN_ASSIGN_MUL)  \
+  X(TOKEN_ASSIGN_DIV)  \
+  X(TOKEN_ASSIGN_BITAND)\
+  X(TOKEN_ASSIGN_BITOR)\
+  X(TOKEN_ASSIGN_BITXOR)\
+  X(TOKEN_ASSIGN_SHR)  \
+  X(TOKEN_ASSIGN_SHL)  \
+                       \
+  X(TOKEN_INC)         \
+  X(TOKEN_DEC)         \
 
-  TOKEN_IDENTIFIER,
+#define MAKE_ENUM(name) name,
 
-  TOKEN_INT_LITERAL,
-  TOKEN_FLOAT_LITERAL,
-
-  // operators: math
-  TOKEN_ADD,
-  TOKEN_SUB,
-  TOKEN_MUL,
-  TOKEN_DIV,
-
-  // operators: logic
-  TOKEN_BITAND,
-  TOKEN_BITOR,
-  TOKEN_BITXOR,
-  TOKEN_ESCLAM,
-
-  // operators: shifts
-  TOKEN_SHR,
-  TOKEN_SHL,
-
-  // operators: comparison
-  TOKEN_EQUALITY,
-  TOKEN_BIGGER,
-  TOKEN_LESS,
-  TOKEN_BIGEQ,
-  TOKEN_LESSEQ,
-
-  // assignments
-  TOKEN_ASSIGN_EQ,
-  TOKEN_ASSIGN_ADD,
-  TOKEN_ASSIGN_SUB,
-  TOKEN_ASSIGN_MUL,
-  TOKEN_ASSIGN_DIV,
-  TOKEN_ASSIGN_BITAND,
-  TOKEN_ASSIGN_BITOR,
-  TOKEN_ASSIGN_BITXOR,
-  TOKEN_ASSIGN_SHR,
-  TOKEN_ASSIGN_SHL,
-
-  TOKEN_INC,
-  TOKEN_DEC,
+enum TokenType {
+  TOKEN_TYPES(MAKE_ENUM)
 };
+
+#undef MAKE_ENUM
 
 /**
  * allocates a token, don't forgot to free it
@@ -67,5 +74,10 @@ struct Token token_alloc(char *str, int type);
  * free a priviously allocated token
  */
 void token_free(struct Token *token);
+
+/**
+ * get the string name for the token type
+ */
+char *get_token_type_str(enum TokenType type);
 
 #endif

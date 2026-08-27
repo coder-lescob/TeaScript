@@ -28,7 +28,7 @@ int main(int argc, char **argv) {
   for (i = 0; (token = lexer_consume_token(&lexer)).type != TOKEN_EOF && i < 500; i++) {
     //printf("%p\n", lexer.consume_ptr);
     if (strcmp(token.word, "") == 0) continue;
-    printf("%s type: %d\n", token.word, token.type);
+    printf("%s type: %s\n", token.word, get_token_type_str(token.type));
   }
 
   if (i == 50) {
