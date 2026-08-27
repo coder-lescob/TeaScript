@@ -56,6 +56,8 @@ struct Token {
                        \
   X(TOKEN_INC)         \
   X(TOKEN_DEC)         \
+                       \
+  X(TOKEN_SEMI_COLON)  \
 
 #define MAKE_ENUM(name) name,
 

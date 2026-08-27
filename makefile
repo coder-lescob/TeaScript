@@ -6,6 +6,7 @@ SRC   := src
 TEST  := tests
 
 CFLAGS := -Wall -Wextra -Wpedantic -I$(SRC) -g
+CFLAGS += -MMD -MP
 LDFLAGS := 
 
 INTERPRETER_SRC := $(wildcard $(SRC)/*.c)
@@ -13,6 +14,8 @@ TEST_SRC        := $(wildcard $(TEST)/*.c)
 OBJS            := $(patsubst $(SRC)/%.c,$(BUILD)/$(SRC)/%.o,$(INTERPRETER_SRC))
 TESTS           := $(patsubst $(TEST)/%.c,$(BUILD)/$(TEST)/%,$(TEST_SRC))
 TARGET          := $(BUILD)/tea
+
+-include $(OBJS:.o=.d)
 
 .PHONY: create_build_dirs build build_tests test run debug
 

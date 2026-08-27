@@ -143,6 +143,7 @@ int classify_token(char *buf, int buf_len) {
       case '!': return TOKEN_ESCLAM;
       case '>': return TOKEN_BIGGER;
       case '<': return TOKEN_LESS;
+      case ';': return TOKEN_SEMI_COLON;
     }
   }
 

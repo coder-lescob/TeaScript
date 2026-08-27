@@ -24,15 +24,9 @@ int main(int argc, char **argv) {
   struct Lexer lexer = CREATE_LEXER(code);
   struct Token token;
   
-  int i;
-  for (i = 0; (token = lexer_consume_token(&lexer)).type != TOKEN_EOF && i < 500; i++) {
-    //printf("%p\n", lexer.consume_ptr);
+  while ((token = lexer_consume_token(&lexer)).type != TOKEN_EOF) {
     if (strcmp(token.word, "") == 0) continue;
     printf("%s type: %s\n", token.word, get_token_type_str(token.type));
-  }
-
-  if (i == 50) {
-    printf("end");
   }
 
   free(code);
