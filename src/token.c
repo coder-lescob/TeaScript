@@ -50,7 +50,7 @@ char *get_token_type_str(enum TokenType type) {
   switch (type) {
     TOKEN_TYPES(MAKE_ENUM)
     default:
-      return "UNKNOW TOKEN TYPE";
+      return "UNKNOWN TOKEN TYPE";
   }
 
   #undef MAKE_ENUM

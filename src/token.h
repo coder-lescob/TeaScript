@@ -18,6 +18,10 @@ struct Token {
                        \
   X(TOKEN_INT_LITERAL) \
   X(TOKEN_FLOAT_LITERAL)\
+  X(TOKEN_CHR_LITERAL) \
+  X(TOKEN_STR_LITERAL) \
+  X(TOKEN_INCOMPLETE_CHR)\
+  X(TOKEN_INCOMPLETE_STR)\
                        \
   /* operators: math */\
   X(TOKEN_ADD)         \
@@ -58,6 +62,16 @@ struct Token {
   X(TOKEN_DEC)         \
                        \
   X(TOKEN_SEMI_COLON)  \
+  X(TOKEN_COLON)       \
+  X(TOKEN_COMMA)       \
+  X(TOKEN_DOT)         \
+  X(TOKEN_INTEROG)     \
+  X(TOKEN_RPARENTHESES)\
+  X(TOKEN_LPARENTHESES)\
+  X(TOKEN_LSQRBRACKETS)\
+  X(TOKEN_RSQRBRACKETS)\
+  X(TOKEN_LCURLY)      \
+  X(TOKEN_RCURLY)      \
 
 #define MAKE_ENUM(name) name,
 

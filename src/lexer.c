@@ -43,13 +43,11 @@ struct Token lexer_consume_token(struct Lexer *lexer) {
       break;
     }
     
-    // the current token is invalid if it has a ' ', '\t' or '\n'
-    // tho if it has not started yet, skip theses
+    // skip blank chars in the front of the the word
     if (is_blank_chr(*lexer->consume_ptr)) {
       if (blank_yet) {
         continue;
       }
-      break;
     }
 
     // push the current letter to the buffer
@@ -101,12 +99,124 @@ static bool is_identifier(char *buf, int buf_len) {
   return true;
 }
 
+static bool is_int_literal(char *buf, int buf_len) {
+  if (buf_len == 0) return false;
+
+  for (;*buf != 0; buf++) {
+    if (!isdigit(*buf)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+static bool is_float_literal(char *buf, int buf_len) {
+  if (buf_len == 0) return false;
+
+  for (; *buf != '.' && *buf != 0; buf++) {
+    if (!isdigit(*buf)) {
+      return false;
+    }
+  }
+  
+  // end of literal
+  if (*buf == 0) {
+    return true;
+  }
+  
+  // there's a dot, continue
+  if (*buf != '.') {
+    return false;
+  }
+
+  for (; *buf != 0; buf++) {
+    if (!isdigit(*buf)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+static bool is_chr_literal(char *buf, int buf_len) {
+  if (buf_len <= 2) return false; // a char literal cannot be empty
+  
+  // a char literal should start with a single quote
+  if (buf[0] != '\'') return false;
+  
+  // and end with another single quote
+  if (buf[buf_len - 1] != '\'') return false;
+
+  return true;
+}
+
+static bool is_incomplete_chr_literal(char *buf, int buf_len) {
+  // an incomplete char litral should start with a single quote at the start
+  if (buf_len == 0 || buf[0] != '\'') return false;
+
+  for (buf++; *buf != 0; buf++) {
+    if (*buf == '\'') {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+static bool is_str_literal(char *buf, int buf_len) {
+  if (buf_len < 2) return false;
+  
+  // a str literal should start with a double quote
+  if (buf[0] != '"') return false;
+  
+  // and end with another double quote
+  if (buf[buf_len - 1] != '"') return false;
+
+  return true;
+}
+
+static bool is_incomplete_str_literal(char *buf, int buf_len) {
+  // a incomplete str literalral should start with a double quote
+  if (buf_len == 0 || buf[0] != '"') return false;
+
+  for (buf++; *buf != 0; buf++) {
+    if (*buf == '"') {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 /**
  * classifies a token from a string
  */
 int classify_token(char *buf, int buf_len) {
   if (is_identifier(buf, buf_len)) {
     return TOKEN_IDENTIFIER;
+  }
+
+  if (is_int_literal(buf, buf_len)) {
+    return TOKEN_INT_LITERAL;
+  }
+
+  if (is_float_literal(buf, buf_len)) {
+    return TOKEN_FLOAT_LITERAL;
+  }
+
+  if (is_chr_literal(buf, buf_len)) {
+    return TOKEN_CHR_LITERAL;
+  }
+  else if (is_incomplete_chr_literal(buf, buf_len)) {
+    return TOKEN_INCOMPLETE_CHR;
+  }
+
+  if (is_str_literal(buf, buf_len)) {
+    return TOKEN_STR_LITERAL;
+  }
+  else if (is_incomplete_str_literal(buf, buf_len)) {
+    return TOKEN_INCOMPLETE_STR;
   }
 
   if (buf_len == 2 && buf[1] == '=') {
@@ -124,10 +234,19 @@ int classify_token(char *buf, int buf_len) {
     }
   }
 
+  if (buf_len == 3 && buf[2] == '=' && buf[0] == buf[1]) {
+    switch (buf[0]) {
+      case '<': return TOKEN_ASSIGN_SHL;
+      case '>': return TOKEN_ASSIGN_SHR;
+    }
+  }
+
   if (buf_len == 2 && buf[0] == buf[1]) {
     switch (buf[0]) {
       case '+': return TOKEN_INC;
       case '-': return TOKEN_DEC;
+      case '>': return TOKEN_SHR;
+      case '<': return TOKEN_SHL;
     }
   }
 
@@ -145,6 +264,16 @@ int classify_token(char *buf, int buf_len) {
       case '<': return TOKEN_LESS;
       case ';': return TOKEN_SEMI_COLON;
       case '=': return TOKEN_ASSIGN_EQ;
+      case '(': return TOKEN_LPARENTHESES;
+      case ')': return TOKEN_RPARENTHESES;
+      case ':': return TOKEN_COLON;
+      case ',': return TOKEN_COMMA;
+      case '.': return TOKEN_DOT;
+      case '?': return TOKEN_INTEROG;
+      case '[': return TOKEN_LSQRBRACKETS;
+      case ']': return TOKEN_RSQRBRACKETS;
+      case '{': return TOKEN_LCURLY;
+      case '}': return TOKEN_RCURLY;
     }
   }
 

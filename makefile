@@ -39,7 +39,8 @@ build: create_build_dirs $(OBJS)
 
 build_tests: create_build_dirs $(TESTS)
 
-clear:
+clean:
+	@echo "Cleaning builds"
 	@rm -rf $(BUILD)
 
 test: build_tests
