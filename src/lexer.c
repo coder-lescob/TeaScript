@@ -189,10 +189,28 @@ static bool is_incomplete_str_literal(char *buf, int buf_len) {
   return true;
 }
 
+#define WORD_TOKEN(word, buf, buf_len, token_type) \
+  if (strncmp(buf, word, buf_len) == 0) return token_type;
+
 /**
  * classifies a token from a string
  */
 int classify_token(char *buf, int buf_len) {
+  // keywords tokens
+  WORD_TOKEN("let", buf, buf_len, TOKEN_LET);
+  WORD_TOKEN("func", buf, buf_len, TOKEN_FUNC);
+  WORD_TOKEN("struct", buf, buf_len, TOKEN_STRUCT);
+  WORD_TOKEN("impl", buf, buf_len, TOKEN_IMPL);
+  WORD_TOKEN("behavior", buf, buf_len, TOKEN_BEHAVIOR);
+  WORD_TOKEN("use", buf, buf_len, TOKEN_USE);
+  WORD_TOKEN("static", buf, buf_len, TOKEN_STATIC);
+  WORD_TOKEN("const", buf, buf_len, TOKEN_CONST);
+  WORD_TOKEN("for", buf, buf_len, TOKEN_FOR);
+  WORD_TOKEN("while", buf, buf_len, TOKEN_WHILE);
+  WORD_TOKEN("do", buf, buf_len, TOKEN_DO);
+  WORD_TOKEN("if", buf, buf_len, TOKEN_IF);
+  WORD_TOKEN("else", buf, buf_len, TOKEN_ELSE);
+
   if (is_identifier(buf, buf_len)) {
     return TOKEN_IDENTIFIER;
   }

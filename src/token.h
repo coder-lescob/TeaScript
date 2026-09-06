@@ -16,6 +16,7 @@ struct Token {
                        \
   X(TOKEN_IDENTIFIER)  \
                        \
+  /* literals */       \
   X(TOKEN_INT_LITERAL) \
   X(TOKEN_FLOAT_LITERAL)\
   X(TOKEN_CHR_LITERAL) \
@@ -61,6 +62,7 @@ struct Token {
   X(TOKEN_INC)         \
   X(TOKEN_DEC)         \
                        \
+  /* symboels */       \
   X(TOKEN_SEMI_COLON)  \
   X(TOKEN_COLON)       \
   X(TOKEN_COMMA)       \
@@ -72,6 +74,21 @@ struct Token {
   X(TOKEN_RSQRBRACKETS)\
   X(TOKEN_LCURLY)      \
   X(TOKEN_RCURLY)      \
+                       \
+  /* keywords */       \
+  X(TOKEN_LET)         \
+  X(TOKEN_FUNC)        \
+  X(TOKEN_STRUCT)      \
+  X(TOKEN_IMPL)        \
+  X(TOKEN_BEHAVIOR)    \
+  X(TOKEN_USE)         \
+  X(TOKEN_STATIC)      \
+  X(TOKEN_CONST)       \
+  X(TOKEN_FOR)         \
+  X(TOKEN_WHILE)       \
+  X(TOKEN_DO)          \
+  X(TOKEN_IF)          \
+  X(TOKEN_ELSE)        \
 
 #define MAKE_ENUM(name) name,
 
