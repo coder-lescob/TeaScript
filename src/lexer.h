@@ -25,5 +25,10 @@ struct Token lexer_peek_token(struct Lexer *lexer);
  */
 int classify_token(char *buf, int buf_len);
 
+/**
+ * the lexer final classifcation of the word
+ */
+int final_classification(char *buf, int buf_len);
+
 
 #endif

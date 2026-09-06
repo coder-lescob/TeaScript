@@ -56,15 +56,15 @@ struct Token lexer_consume_token(struct Lexer *lexer) {
   }
   
   // eof file is reached if and only if the consume cursor of the lexer has reached the eof
-  bool eof_reached = is_eof_chr(*lexer->consume_ptr);
+  bool eof_reached = is_eof_chr(*(lexer->consume_ptr - 1));
 
   // remove the last letter only if the last fetched character made the token illegal.
-  if (buf_len > 0 && classify_token(buf, buf_len) == TOKEN_ILLEGAL) {
+  if (buf_len > 0 && final_classification(buf, buf_len) == TOKEN_ILLEGAL) {
     buf[--buf_len] = 0;
     lexer->consume_ptr--;
     
     // tho if it's still illegal after that it was probably entirely illegal so keep it as illegal.
-    if (classify_token(buf, buf_len) == TOKEN_ILLEGAL) {
+    if (final_classification(buf, buf_len) == TOKEN_ILLEGAL) {
       buf[buf_len++] = *(lexer->consume_ptr++);
     }
   }
@@ -73,7 +73,7 @@ struct Token lexer_consume_token(struct Lexer *lexer) {
     return (struct Token) { .word = NULL, .type = TOKEN_EOF };
   }
 
-  return token_alloc(buf, classify_token(buf, buf_len));
+  return token_alloc(buf, final_classification(buf, buf_len));
 }
 
 /**
@@ -113,6 +113,7 @@ static bool is_int_literal(char *buf, int buf_len) {
 
 static bool is_float_literal(char *buf, int buf_len) {
   if (buf_len == 0) return false;
+  if (buf[0] == '.') return false;
 
   for (; *buf != '.' && *buf != 0; buf++) {
     if (!isdigit(*buf)) {
@@ -120,15 +121,19 @@ static bool is_float_literal(char *buf, int buf_len) {
     }
   }
   
-  // end of literal
+  // end of literal without a dot which is thus
+  // and int literal and not a float literal
   if (*buf == 0) {
-    return true;
+    return false;
   }
   
   // there's a dot, continue
   if (*buf != '.') {
     return false;
   }
+  
+  // skip the dot
+  buf++;
 
   for (; *buf != 0; buf++) {
     if (!isdigit(*buf)) {
@@ -137,6 +142,19 @@ static bool is_float_literal(char *buf, int buf_len) {
   }
 
   return true;
+}
+
+static bool is_incomplete_float_literal(char *buf, int buf_len) {
+  if (buf_len == 0) return false;
+  if (buf[0] == '.') return false;
+
+  for (; *buf != '.' && *buf != 0; buf++) {
+    if (!isdigit(*buf)) {
+      return false;
+    }
+  }
+
+  return *buf == '.';
 }
 
 static bool is_chr_literal(char *buf, int buf_len) {
@@ -196,6 +214,8 @@ static bool is_incomplete_str_literal(char *buf, int buf_len) {
  * classifies a token from a string
  */
 int classify_token(char *buf, int buf_len) {
+  if (buf_len == 0) return TOKEN_ILLEGAL;
+
   // keywords tokens
   WORD_TOKEN("let", buf, buf_len, TOKEN_LET);
   WORD_TOKEN("func", buf, buf_len, TOKEN_FUNC);
@@ -215,13 +235,16 @@ int classify_token(char *buf, int buf_len) {
     return TOKEN_IDENTIFIER;
   }
 
-  if (is_int_literal(buf, buf_len)) {
-    return TOKEN_INT_LITERAL;
-  }
-
   if (is_float_literal(buf, buf_len)) {
     return TOKEN_FLOAT_LITERAL;
   }
+  else if (is_incomplete_float_literal(buf, buf_len)) {
+    return TOKEN_INCOMPLETE_FLOAT;
+  }
+
+  if (is_int_literal(buf, buf_len)) {
+    return TOKEN_INT_LITERAL;
+  } 
 
   if (is_chr_literal(buf, buf_len)) {
     return TOKEN_CHR_LITERAL;
@@ -296,4 +319,15 @@ int classify_token(char *buf, int buf_len) {
   }
 
   return TOKEN_ILLEGAL;
+}
+
+int final_classification(char *buf, int buf_len) {
+  int type = classify_token(buf, buf_len);
+  
+  // incompletes tokens are obviously illegal at the end
+  if (type == TOKEN_INCOMPLETE_CHR || type == TOKEN_INCOMPLETE_STR || type == TOKEN_INCOMPLETE_FLOAT) {
+    return TOKEN_ILLEGAL;
+  }
+
+  return type;
 }
