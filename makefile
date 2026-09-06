@@ -46,7 +46,7 @@ clean:
 test: build_tests
 	@echo -e "testing\n"
 	@for file in $(TESTS); do \
-		echo "test $$file";    \
+		echo "test" $$(basename $$file);    \
 		$$file;                 \
 	done
 
