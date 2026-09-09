@@ -141,6 +141,10 @@ static bool is_float_literal(char *buf, int buf_len) {
     }
   }
 
+  if (*(buf - 1) == '.') {
+    return false;
+  }
+
   return true;
 }
 
@@ -207,8 +211,6 @@ static bool is_incomplete_str_literal(char *buf, int buf_len) {
   return true;
 }
 
-#define WORD_TOKEN(word, buf, buf_len, token_type) \
-  if (strncmp(buf, word, buf_len) == 0) return token_type;
 
 /**
  * classifies a token from a string
@@ -216,20 +218,26 @@ static bool is_incomplete_str_literal(char *buf, int buf_len) {
 int classify_token(char *buf, int buf_len) {
   if (buf_len == 0) return TOKEN_ILLEGAL;
 
+  #define KEYWORD_TOKEN(word, token_type) \
+   if (strncmp(buf, word, buf_len) == 0) return token_type;
+
   // keywords tokens
-  WORD_TOKEN("let", buf, buf_len, TOKEN_LET);
-  WORD_TOKEN("func", buf, buf_len, TOKEN_FUNC);
-  WORD_TOKEN("struct", buf, buf_len, TOKEN_STRUCT);
-  WORD_TOKEN("impl", buf, buf_len, TOKEN_IMPL);
-  WORD_TOKEN("behavior", buf, buf_len, TOKEN_BEHAVIOR);
-  WORD_TOKEN("use", buf, buf_len, TOKEN_USE);
-  WORD_TOKEN("static", buf, buf_len, TOKEN_STATIC);
-  WORD_TOKEN("const", buf, buf_len, TOKEN_CONST);
-  WORD_TOKEN("for", buf, buf_len, TOKEN_FOR);
-  WORD_TOKEN("while", buf, buf_len, TOKEN_WHILE);
-  WORD_TOKEN("do", buf, buf_len, TOKEN_DO);
-  WORD_TOKEN("if", buf, buf_len, TOKEN_IF);
-  WORD_TOKEN("else", buf, buf_len, TOKEN_ELSE);
+  KEYWORD_TOKEN("let",    TOKEN_LET);
+  KEYWORD_TOKEN("func",   TOKEN_FUNC);
+  KEYWORD_TOKEN("struct", TOKEN_STRUCT);
+  KEYWORD_TOKEN("impl",   TOKEN_IMPL);
+  KEYWORD_TOKEN("behavior", TOKEN_BEHAVIOR);
+  KEYWORD_TOKEN("use",    TOKEN_USE);
+  KEYWORD_TOKEN("static", TOKEN_STATIC);
+  KEYWORD_TOKEN("const",  TOKEN_CONST);
+  KEYWORD_TOKEN("for",    TOKEN_FOR);
+  KEYWORD_TOKEN("while",  TOKEN_WHILE);
+  KEYWORD_TOKEN("do",     TOKEN_DO);
+  KEYWORD_TOKEN("if",     TOKEN_IF);
+  KEYWORD_TOKEN("else",   TOKEN_ELSE);
+  KEYWORD_TOKEN("switch", TOKEN_SWITCH);
+
+  #undef KEYWORD_TOKEN
 
   if (is_identifier(buf, buf_len)) {
     return TOKEN_IDENTIFIER;
@@ -272,6 +280,13 @@ int classify_token(char *buf, int buf_len) {
       case '&': return TOKEN_ASSIGN_BITAND;
       case '|': return TOKEN_ASSIGN_BITOR;
       case '^': return TOKEN_ASSIGN_BITXOR;
+    }
+  }
+
+  if (buf_len == 2 && buf[1] == '>') {
+    switch (buf[0]) {
+      case '=': return TOKEN_DOUBLE_ARROW;
+      case '-': return TOKEN_SINGLE_ARROW;
     }
   }
 

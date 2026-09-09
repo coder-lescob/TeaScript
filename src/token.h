@@ -75,6 +75,8 @@ struct Token {
   X(TOKEN_RSQRBRACKETS)\
   X(TOKEN_LCURLY)      \
   X(TOKEN_RCURLY)      \
+  X(TOKEN_DOUBLE_ARROW)\
+  X(TOKEN_SINGLE_ARROW)\
                        \
   /* keywords */       \
   X(TOKEN_LET)         \
@@ -90,6 +92,7 @@ struct Token {
   X(TOKEN_DO)          \
   X(TOKEN_IF)          \
   X(TOKEN_ELSE)        \
+  X(TOKEN_SWITCH)      \
 
 #define MAKE_ENUM(name) name,
 

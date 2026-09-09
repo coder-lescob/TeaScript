@@ -101,15 +101,24 @@ int test_lexer_consume_all_tokens(void)
     int expected;
   } tests[] = {
       { "§",          TOKEN_ILLEGAL },
+      { "#",          TOKEN_ILLEGAL },
 
       { "o1",         TOKEN_IDENTIFIER },
       { "ezbdez",     TOKEN_IDENTIFIER },
       { "cdcb_0254u", TOKEN_IDENTIFIER },
+      { "else0",      TOKEN_IDENTIFIER },
 
       { "123",        TOKEN_INT_LITERAL },
       { "123.456",    TOKEN_FLOAT_LITERAL },
+      // float literal edge cases
+      { "12.",        TOKEN_INT_LITERAL },
+      { ".36",        TOKEN_DOT         },
+
+      // char and str literal with edge cases
       { "'a'",        TOKEN_CHR_LITERAL },
       { "\"hello\"",  TOKEN_STR_LITERAL },
+      { "'a",         TOKEN_ILLEGAL     },
+      { "\"what?!",   TOKEN_ILLEGAL     },
 
       { "+",           TOKEN_ADD },
       { "-",           TOKEN_SUB },
@@ -156,6 +165,8 @@ int test_lexer_consume_all_tokens(void)
       { "]",           TOKEN_RSQRBRACKETS },
       { "{",           TOKEN_LCURLY },
       { "}",           TOKEN_RCURLY },
+      { "=>",          TOKEN_DOUBLE_ARROW },
+      { "->",          TOKEN_SINGLE_ARROW },
 
       { "let",         TOKEN_LET },
       { "func",        TOKEN_FUNC },
@@ -168,8 +179,9 @@ int test_lexer_consume_all_tokens(void)
       { "for",         TOKEN_FOR },
       { "while",       TOKEN_WHILE },
       { "do",          TOKEN_DO },
-      { "if",           TOKEN_IF },
+      { "if",          TOKEN_IF },
       { "else",        TOKEN_ELSE },
+      { "switch",      TOKEN_SWITCH },
   };
     
   // get the number of tokens in the tests
@@ -186,7 +198,7 @@ int test_lexer_consume_all_tokens(void)
     if (actual.type != tests[i].expected) {
       fprintf(
         stderr,
-        "[FAIL] test #%zu: input \"%s\": "
+        "[FAIL] test #%zu: input %s: "
         "expected %s, got %s %s\n",
         i,
         tests[i].source,
@@ -200,7 +212,7 @@ int test_lexer_consume_all_tokens(void)
     }
     else {
       printf(
-        "[PASS] test #%zu: \"%s\" -> %s\n",
+        "[PASS] test #%zu: %s -> %s\n",
         i,
         tests[i].source,
         get_token_type_str(actual.type)
