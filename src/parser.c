@@ -84,10 +84,36 @@ void free_parser(struct Parser *parser) {
  * or any other node creation method would result in an error operation not permitted.
  */
 void parser_done(struct Parser *parser) {
-  if (parser == NULL) return;
+  if (parser == NULL || parser->nodes == NULL) return;
   
   // freeze the parser
   parser->done = true;
+
+  // fix all addresses
+  for (size_t i = 0; i < parser->node_count; i++) {
+    parser_fix_pointers(parser, &parser->nodes[i]);
+  }
+}
+
+/**
+ * fix the pointers attributes of an ast node.
+ * WARNING: do not call that outside of parser_done.
+ */
+void parser_fix_pointers(struct Parser *parser, struct AstNode *node) {
+  if (parser == NULL || node == NULL) return;
+
+  switch (node->type) {
+    case NODE_ADD:
+      node->add.A += (uintptr_t)parser->nodes;
+      node->add.B += (uintptr_t)parser->nodes;
+      break;
+    case NODE_SUB:
+      node->sub.A += (uintptr_t)parser->nodes;
+      node->sub.B += (uintptr_t)parser->nodes;
+      break;
+  }
+
+  return;
 }
 
 /**

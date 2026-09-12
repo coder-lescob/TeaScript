@@ -56,6 +56,12 @@ void free_parser(struct Parser *parser);
 void parser_done(struct Parser *parser);
 
 /**
+ * fix the pointers attributes of an ast node.
+ * WARNING: do not call that outside of parser_done.
+ */
+void parser_fix_pointers(struct Parser *parser, struct AstNode *node);
+
+/**
  * pushes a node to the parser's nodes
  */
 bool parser_push_node(struct Parser *parser, struct AstNode *node);
