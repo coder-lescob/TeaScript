@@ -8,12 +8,12 @@
 struct Value value_from_token_literal(struct Token token) {
   switch (token.type) {
     case TOKEN_INT_LITERAL:
-      return (struct Value) { .type = VALUE_INT, .value = { .int_value = { convert_str_to_int(token.word) } } };
+      return (struct Value) { .type = VALUE_INT, .int_value = convert_raw_str_to_int(token.word) }; // trust the lexer
 
     case TOKEN_FLOAT_LITERAL:
-      return (struct Value) { .type = VALUE_FLOAT, .value = { .float_value = { convert_str_to_float(token.word) } } };
+      return (struct Value) { .type = VALUE_FLOAT, .float_value = convert_raw_str_to_float(token.word) }; // trust the lexer
 
     case TOKEN_CHR_LITERAL:
-      return (struct Value) { .type = VALUE_CHR, .value = { .chr_value = { token.word[0] } } };
+      return (struct Value) { .type = VALUE_CHR, .chr_value = token.word[0] };
   }
 }

@@ -5,7 +5,7 @@ BUILD := build
 SRC   := src
 TEST  := tests
 
-CFLAGS := -Wall -Wextra -Wpedantic -I$(SRC) -g
+CFLAGS := -Wall -Wextra -Wpedantic -I$(SRC) -g #-fsanitize=address
 CFLAGS += -MMD -MP
 LDFLAGS := 
 

@@ -27,6 +27,7 @@ int main(int argc, char **argv) {
   while ((token = lexer_consume_token(&lexer)).type != TOKEN_EOF) {
     if (strcmp(token.word, "") == 0) continue;
     printf("%s type: %s\n", token.word, get_token_type_str(token.type));
+    token_free(&token);
   }
 
   free(code);

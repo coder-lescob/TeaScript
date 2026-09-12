@@ -29,10 +29,10 @@ struct Value {
   union {
     uint64_t      int_value;
     double        float_value;
-    struct String str;
-    char          chr;
+    struct String str_value;
+    char          chr_value;
     struct Struct struct_value;
-  } value;
+  };
 };
 
 /**
