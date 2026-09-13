@@ -1,3 +1,9 @@
+/**********************************************************************************************
+ * This file contains all the teascript parser. For teascript I used a pratt parser because   *
+ * it is very good at operation priority and that it can treat a lot of things as expression. *
+ * Copyright (c) 2026 Gabriel LESCOB. All Rights Reserved.                                    *
+ **********************************************************************************************/
+
 #include "parser.h"
 #include "token.h"
 #include "lexer.h"
@@ -14,7 +20,7 @@
 
 /**********************************************************************************************
  *  WARNING: pointers used inside the parser code are relative.                               *
- *  Then they's made absolute when the parser_done is called.                                 *
+ *  Then they're made absolute when the parser_done is called.                                *
  *  So until the parser is marked done, the pointer fields of                                 *
  *  shall not be thought as valid.                                                            *
  **********************************************************************************************/
@@ -75,6 +81,7 @@ void free_parser(struct Parser *parser) {
   // free all the nodes
   if (parser->nodes != NULL) {
     free(parser->nodes);
+    parser->nodes = NULL; // avoid dangling ptr
   }
 }
 
@@ -111,9 +118,15 @@ void parser_fix_pointers(struct Parser *parser, struct AstNode *node) {
       node->sub.A += (uintptr_t)parser->nodes;
       node->sub.B += (uintptr_t)parser->nodes;
       break;
+    case NODE_MUL:
+      node->mul.A += (uintptr_t)parser->nodes;
+      node->mul.B += (uintptr_t)parser->nodes;
+      break;
+    case NODE_DIV:
+      node->div.A += (uintptr_t)parser->nodes;
+      node->div.B += (uintptr_t)parser->nodes;
+      break;
   }
-
-  return;
 }
 
 /**
@@ -215,6 +228,44 @@ size_t create_add_node(struct Parser *parser, struct AddNode add) {
 size_t create_sub_node(struct Parser *parser, struct SubNode sub) {
   // create a new node
   struct AstNode node             = (struct AstNode) { .type = NODE_SUB, .sub = sub };
+  size_t         relative_address = parser->node_count; // index
+
+  // push it to the parser
+  if (!parser_push_node(parser, &node)) {
+    perror("node push failed");
+    return 0; // 0 is used as a sentinel because no sane node would point back to the root node.
+  }
+
+  // return the relative ptr to the node
+  return relative_address;
+}
+
+/**
+ * creates an mul node
+ * WARNING: 0 is used as an error sentinel
+ */
+size_t create_mul_node(struct Parser *parser, struct MulNode mul) {
+  // create a new node
+  struct AstNode node             = (struct AstNode) { .type = NODE_SUB, .mul = mul };
+  size_t         relative_address = parser->node_count; // index
+
+  // push it to the parser
+  if (!parser_push_node(parser, &node)) {
+    perror("node push failed");
+    return 0; // 0 is used as a sentinel because no sane node would point back to the root node.
+  }
+
+  // return the relative ptr to the node
+  return relative_address;
+}
+
+/**
+ * creates an div node
+ * WARNING: 0 is used as an error sentinel
+ */
+size_t create_div_node(struct Parser *parser, struct DivNode div) {
+  // create a new node
+  struct AstNode node             = (struct AstNode) { .type = NODE_SUB, .div = div };
   size_t         relative_address = parser->node_count; // index
 
   // push it to the parser

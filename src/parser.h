@@ -1,3 +1,10 @@
+/**********************************************************************************************
+ * This file contains the teascript parser overview.                                          *
+ * For teascript I used a pratt parser because it is very good at operation priority          *
+ * and that it can treat a lot of things as expression.                                       *
+ * Copyright (c) 2026 Gabriel LESCOB. All Rights Reserved.                                    *
+ **********************************************************************************************/
+
 #ifndef PARSER_H
 #define PARSER_H
 
@@ -89,5 +96,17 @@ size_t create_add_node(struct Parser *parser, struct AddNode add);
  * WARNING: 0 is used as an error sentinel
  */
 size_t create_sub_node(struct Parser *parser, struct SubNode sub);
+
+/**
+ * creates an mul node
+ * WARNING: 0 is used as an error sentinel
+ */
+size_t create_mul_node(struct Parser *parser, struct MulNode mul);
+
+/**
+ * creates an div node
+ * WARNING: 0 is used as an error sentinel
+ */
+size_t create_div_node(struct Parser *parser, struct DivNode div);
 
 #endif
