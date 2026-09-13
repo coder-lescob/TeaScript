@@ -7,10 +7,7 @@
 enum AstNodeType {
   NODE_SYNTAX_ERR,
   NODE_IMM,
-  NODE_ADD,
-  NODE_SUB,
-  NODE_MUL,
-  NODE_DIV,
+  NODE_BINARY_OP,
 };
 
 struct SynErrNode {
@@ -21,19 +18,15 @@ struct ImmNode {
   struct Value imm;
 };
 
-struct AddNode {
-  struct AstNode *A, *B;
+enum BinOp {
+  OP_ADD,
+  OP_SUB,
+  OP_MUL,
+  OP_DIV,
 };
 
-struct SubNode {
-  struct AstNode *A, *B;
-};
-
-struct MulNode {
-  struct AstNode *A, *B;
-};
-
-struct DivNode {
+struct BinOpNode {
+  enum BinOp op;
   struct AstNode *A, *B;
 };
 
@@ -42,10 +35,7 @@ struct AstNode {
   union {
     struct SynErrNode err;
     struct ImmNode imm;
-    struct AddNode add;
-    struct SubNode sub;
-    struct MulNode mul;
-    struct DivNode div;
+    struct BinOpNode bin_op;
   };
 };
 

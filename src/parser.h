@@ -24,6 +24,9 @@ struct Parser {
   size_t capacity;
   size_t node_count;
   
+  // the index of the root node
+  size_t root_node;
+  
   // set when parsing is done, prohibates any further actions than reading from the lexer.
   // any manual violation MUST not reallocate the `nodes` field otherwise all the pointers
   // used by the ast nodes would be corrupted.
@@ -37,7 +40,22 @@ struct Parser {
 /**
  * uses the syntax of teascript to parse a lexer
  */
-struct Parser parse_lexer(struct Lexer lexer);
+struct Parser parse_lexer(struct Lexer *lexer);
+
+/**
+ * parses an expression
+ */
+void parse_expression(struct Parser *parser, struct Lexer *lexer, int binding_power);
+
+/**
+ * get the binding power of a token; -1 is returned when that's impossible to get.
+ */
+int get_binding_powers(enum TokenType type);
+
+/**
+ * get the binary operator for any operator token
+ */
+enum BinOp get_bin_op_for_op(enum TokenType type);
 
 /**********************************************************************************************
  *                              node/parser creation methods                                  *
@@ -64,14 +82,20 @@ void parser_done(struct Parser *parser);
 
 /**
  * fix the pointers attributes of an ast node.
- * WARNING: do not call that outside of parser_done.
+ * adds offset to all the pointers attributes of a node.
+ * WARNING: do not call that outside of parser internal functions.
  */
-void parser_fix_pointers(struct Parser *parser, struct AstNode *node);
+void parser_fix_pointers(struct AstNode *node, uintptr_t offset);
 
 /**
  * pushes a node to the parser's nodes
  */
 bool parser_push_node(struct Parser *parser, struct AstNode *node);
+
+/**
+ * makes the root node be the last pushed
+ */
+bool parser_make_root(struct Parser *parser, size_t node);
 
 /**
  * create a syntax error node
@@ -86,27 +110,9 @@ size_t create_syntax_error(struct Parser *parser, struct SynErrNode err);
 size_t create_node_imm(struct Parser *parser, struct ImmNode imm);
 
 /**
- * creates an add node
+ * creates a binary operation node
  * WARNING: 0 is used as an error sentinel
  */
-size_t create_add_node(struct Parser *parser, struct AddNode add);
-
-/**
- * creates an sub node
- * WARNING: 0 is used as an error sentinel
- */
-size_t create_sub_node(struct Parser *parser, struct SubNode sub);
-
-/**
- * creates an mul node
- * WARNING: 0 is used as an error sentinel
- */
-size_t create_mul_node(struct Parser *parser, struct MulNode mul);
-
-/**
- * creates an div node
- * WARNING: 0 is used as an error sentinel
- */
-size_t create_div_node(struct Parser *parser, struct DivNode div);
+size_t create_binary_op_node(struct Parser *parser, struct BinOpNode op);
 
 #endif

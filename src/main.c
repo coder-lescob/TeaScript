@@ -5,6 +5,7 @@
 
 #include "token.h"
 #include "lexer.h"
+#include "parser.h"
 
 char *file_read_all(char *path);
 
@@ -22,13 +23,8 @@ int main(int argc, char **argv) {
   }
   
   struct Lexer lexer = CREATE_LEXER(code);
-  struct Token token;
-  
-  while ((token = lexer_consume_token(&lexer)).type != TOKEN_EOF) {
-    if (strcmp(token.word, "") == 0) continue;
-    printf("%s type: %s\n", token.word, get_token_type_str(token.type));
-    token_free(&token);
-  }
+  struct Parser parser = parse_lexer(&lexer);
+  free_parser(&parser);
 
   free(code);
 
