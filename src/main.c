@@ -6,6 +6,7 @@
 #include "token.h"
 #include "lexer.h"
 #include "parser.h"
+#include "ast_node.h"
 
 char *file_read_all(char *path);
 
@@ -24,6 +25,7 @@ int main(int argc, char **argv) {
   
   struct Lexer lexer = CREATE_LEXER(code);
   struct Parser parser = parse_lexer(&lexer);
+  display_ast_node(&parser.nodes[parser.root_node], 0);
   free_parser(&parser);
 
   free(code);

@@ -34,7 +34,7 @@ struct Parser parse_lexer(struct Lexer *lexer) {
   create_parser(&parser);
   
   // parse as an expression
-  parse_expression(&parser, lexer, 0);
+  parser.root_node = parse_expression(&parser, lexer, 0);
   
   // mark as done
   parser_done(&parser);
@@ -44,14 +44,13 @@ struct Parser parse_lexer(struct Lexer *lexer) {
 /**
  * parses an expression
  */
-void parse_expression(struct Parser *parser, struct Lexer *lexer, int binding_power) {
+size_t parse_expression(struct Parser *parser, struct Lexer *lexer, int binding_power) {
   // consume the token
   struct Token token = lexer_consume_token(lexer);
 
   // not a number
   if (token.type != TOKEN_INT_LITERAL && token.type != TOKEN_FLOAT_LITERAL) {
-    create_syntax_error(parser, (struct SynErrNode) { token } );
-    return; // don't free the token since we keep it !
+    return create_syntax_error(parser, (struct SynErrNode) { token } );
   }
   
   // creates a Value from the literal
@@ -65,6 +64,7 @@ void parse_expression(struct Parser *parser, struct Lexer *lexer, int binding_po
     // get the operator without consuming it
     struct Token op = lexer_peek_token(lexer);
     if (op.type == TOKEN_EOF) {
+      // we're done!
       break; // eof no need to free
     }
     
@@ -72,8 +72,7 @@ void parse_expression(struct Parser *parser, struct Lexer *lexer, int binding_po
     int power = get_binding_powers(op.type);
     if (power == -1) { 
       // invalid operator
-       create_syntax_error(parser, (struct SynErrNode) { op } );
-       break; // don't free the token since we keep it
+      return create_syntax_error(parser, (struct SynErrNode) { op } );
     }
 
     token_free(&op);
@@ -84,16 +83,14 @@ void parse_expression(struct Parser *parser, struct Lexer *lexer, int binding_po
     
     // consume operator
     op = lexer_consume_token(lexer);
-    parse_expression(parser, lexer, power);
-    size_t rhs = parser->root_node; 
+    size_t rhs = parse_expression(parser, lexer, power);
     
     // create the operation
     lhs = create_binary_op_node(parser, (struct BinOpNode) { .op = get_bin_op_for_op(op.type), .A = (struct AstNode *)lhs, .B = (struct AstNode *)rhs } );
     token_free(&op);
   }
   
-  // make the last created operation root
-  parser_make_root(parser, lhs);
+  return lhs;
 }
 
 /**
@@ -229,25 +226,6 @@ bool parser_push_node(struct Parser *parser, struct AstNode *node) {
   // push it!
   parser->nodes[parser->node_count++] = *node;
 
-  return true;
-}
-
-/**
- * makes the root node be the last pushed
- */
-bool parser_make_root(struct Parser *parser, size_t node) {
-  if (parser == NULL) {
-    errno = EINVAL;
-    return false;
-  }
-
-  if (parser->done) {
-    errno = EPERM;
-    return false;
-  }
-
-  // set the root index to node index
-  parser->root_node = node;
   return true;
 }
 

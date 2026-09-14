@@ -40,4 +40,9 @@ struct Value {
  */
 struct Value value_from_token_literal(struct Token token);
 
+/**
+ * displays a value at the screen
+ */
+void print_value(struct Value *value);
+
 #endif

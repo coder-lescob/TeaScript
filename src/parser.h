@@ -45,7 +45,7 @@ struct Parser parse_lexer(struct Lexer *lexer);
 /**
  * parses an expression
  */
-void parse_expression(struct Parser *parser, struct Lexer *lexer, int binding_power);
+size_t parse_expression(struct Parser *parser, struct Lexer *lexer, int binding_power);
 
 /**
  * get the binding power of a token; -1 is returned when that's impossible to get.
@@ -91,11 +91,6 @@ void parser_fix_pointers(struct AstNode *node, uintptr_t offset);
  * pushes a node to the parser's nodes
  */
 bool parser_push_node(struct Parser *parser, struct AstNode *node);
-
-/**
- * makes the root node be the last pushed
- */
-bool parser_make_root(struct Parser *parser, size_t node);
 
 /**
  * create a syntax error node

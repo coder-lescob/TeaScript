@@ -39,4 +39,14 @@ struct AstNode {
   };
 };
 
+/**
+ * displays a given ast node
+ */
+void display_ast_node(struct AstNode *node, int level);
+
+/**
+ * get the string representation of the operation
+ */
+char *get_bin_op(enum BinOp op);
+
 #endif
