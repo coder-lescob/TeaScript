@@ -46,26 +46,44 @@ struct Parser parse_lexer(struct Lexer *lexer) {
  */
 size_t parse_expression(struct Parser *parser, struct Lexer *lexer, int binding_power) {
   // consume the token
+  size_t lhs;
   struct Token token = lexer_consume_token(lexer);
-
-  // not a number
-  if (token.type != TOKEN_INT_LITERAL && token.type != TOKEN_FLOAT_LITERAL) {
+  
+  // opening parentheses
+  if (token.type == TOKEN_LPARENTHESES) {
+    token_free(&token);
+    
+    // parse inside
+    lhs = parse_expression(parser, lexer, 0);
+    
+    // consume token
+    token = lexer_consume_token(lexer);
+    if (token.type != TOKEN_RPARENTHESES) {
+      // oh, oh !
+      return create_syntax_error(parser, (struct SynErrNode) { token } );
+    }
+    token_free(&token);
+  }
+  // a number
+  else if (token.type == TOKEN_INT_LITERAL || token.type == TOKEN_FLOAT_LITERAL) {
+    // creates a Value from the literal
+    struct Value value = value_from_token_literal(token);
+    token_free(&token); // free the token since we don't need it anymore
+    
+    // create an immediate node
+    lhs = create_node_imm(parser, (struct ImmNode) { value } );
+  }
+  else {
     return create_syntax_error(parser, (struct SynErrNode) { token } );
   }
-  
-  // creates a Value from the literal
-  struct Value value = value_from_token_literal(token);
-  token_free(&token); // free the token since we don't need it anymore
-  
-  // create an immediate node
-  size_t lhs = create_node_imm(parser, (struct ImmNode) { value } );
 
   while (true) {
     // get the operator without consuming it
     struct Token op = lexer_peek_token(lexer);
-    if (op.type == TOKEN_EOF) {
+    if (op.type == TOKEN_EOF || op.type == TOKEN_RPARENTHESES) {
       // we're done!
-      break; // eof no need to free
+      token_free(&op);
+      break;
     }
     
     // get binding power
