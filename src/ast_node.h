@@ -5,12 +5,19 @@
 #include "value.h"
 
 enum AstNodeType {
-  NODE_SYNTAX_ERR,
+  NODE_ERR,
   NODE_IMM,
   NODE_BINARY_OP,
 };
 
-struct SynErrNode {
+enum ErrorType {
+  ERR_MISSING_CLOSE_PARENTHESE,
+  ERR_EXPECTED_EXPRESSION,
+  ERR_EXPECTED_OP,
+};
+
+struct ErrNode {
+  enum ErrorType type;
   struct Token token;
 };
 
@@ -33,7 +40,7 @@ struct BinOpNode {
 struct AstNode {
   enum AstNodeType type;
   union {
-    struct SynErrNode err;
+    struct ErrNode err;
     struct ImmNode imm;
     struct BinOpNode bin_op;
   };
@@ -48,5 +55,15 @@ void display_ast_node(struct AstNode *node, int level);
  * get the string representation of the operation
  */
 char *get_bin_op(enum BinOp op);
+
+/**
+ * get the string representation of an error
+ */
+char *get_err_str(enum ErrorType err);
+
+/**
+ * frees an ast node if it needs to be
+ */
+void free_node(struct AstNode *node);
 
 #endif

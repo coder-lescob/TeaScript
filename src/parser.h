@@ -96,7 +96,7 @@ bool parser_push_node(struct Parser *parser, struct AstNode *node);
  * create a syntax error node
  * WARNING: 0 is used as an error sentinel
  */
-size_t create_syntax_error(struct Parser *parser, struct SynErrNode err);
+size_t create_syntax_error(struct Parser *parser, struct ErrNode err);
 
 /**
  * creates an immediate node

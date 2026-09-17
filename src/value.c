@@ -42,6 +42,7 @@ void print_value(struct Value *value) {
      */
 
     default:
+      printf("VALUE( NOT IMPLEMENTED )");
       break;
   }
 }

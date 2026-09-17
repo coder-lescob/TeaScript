@@ -51,17 +51,20 @@ size_t parse_expression(struct Parser *parser, struct Lexer *lexer, int binding_
   
   // opening parentheses
   if (token.type == TOKEN_LPARENTHESES) {
+    // free the open parentheses
     token_free(&token);
     
     // parse inside
     lhs = parse_expression(parser, lexer, 0);
     
-    // consume token
+    // consume token and if it isn't close parentheses then we're in truble
     token = lexer_consume_token(lexer);
     if (token.type != TOKEN_RPARENTHESES) {
       // oh, oh !
-      return create_syntax_error(parser, (struct SynErrNode) { token } );
+      return create_syntax_error(parser, (struct ErrNode) { ERR_MISSING_CLOSE_PARENTHESE, token } );
     }
+
+    // free the close parentheses
     token_free(&token);
   }
   // a number
@@ -74,7 +77,7 @@ size_t parse_expression(struct Parser *parser, struct Lexer *lexer, int binding_
     lhs = create_node_imm(parser, (struct ImmNode) { value } );
   }
   else {
-    return create_syntax_error(parser, (struct SynErrNode) { token } );
+    return create_syntax_error(parser, (struct ErrNode) { ERR_EXPECTED_EXPRESSION, token } );
   }
 
   while (true) {
@@ -90,17 +93,20 @@ size_t parse_expression(struct Parser *parser, struct Lexer *lexer, int binding_
     int power = get_binding_powers(op.type);
     if (power == -1) { 
       // invalid operator
-      return create_syntax_error(parser, (struct SynErrNode) { op } );
+      return create_syntax_error(parser, (struct ErrNode) { ERR_EXPECTED_OP, op } );
     }
-
-    token_free(&op);
 
     if (binding_power > power) {
       break;
     }
     
-    // consume operator
-    op = lexer_consume_token(lexer);
+    // consume operator but ignore it since we already know what it's
+    {
+      struct Token ignore = lexer_consume_token(lexer);
+      token_free(&ignore);
+    }
+
+    // parse the right hand side
     size_t rhs = parse_expression(parser, lexer, power);
     
     // create the operation
@@ -165,6 +171,10 @@ bool create_parser(struct Parser *parser) {
 void free_parser(struct Parser *parser) {
   if (parser == NULL) return;
   
+  // cache the node count
+  size_t node_count = parser->node_count;
+  
+  // set capacity and sizes to 0
   parser->capacity   = 0;
   parser->node_count = 0;
   parser->done       = true;
@@ -172,6 +182,11 @@ void free_parser(struct Parser *parser) {
 
   // free all the nodes
   if (parser->nodes != NULL) {
+    // free all nodes that need to be
+    for (size_t i = 0; i < node_count; i++) {
+      free_node(&parser->nodes[i]);
+    }
+
     free(parser->nodes);
     parser->nodes = NULL; // avoid dangling ptr
   }
@@ -251,9 +266,9 @@ bool parser_push_node(struct Parser *parser, struct AstNode *node) {
  * create a syntax error node
  * WARNING: 0 is used as an error sentinel
  */
-size_t create_syntax_error(struct Parser *parser, struct SynErrNode err) {
+size_t create_syntax_error(struct Parser *parser, struct ErrNode err) {
   // create a new node
-  struct AstNode node             = (struct AstNode) { .type = NODE_SYNTAX_ERR, .err = err };
+  struct AstNode node             = (struct AstNode) { .type = NODE_ERR, .err = err };
   size_t         relative_address = parser->node_count; // index
 
   // push it to the parser

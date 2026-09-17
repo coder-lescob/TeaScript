@@ -21,8 +21,8 @@ void display_ast_node(struct AstNode *node, int level) {
   }
 
   switch (node->type) {
-    case NODE_SYNTAX_ERR:
-      printf("NODE_SYNTAX_ERR( TOKEN( %s, type = %s ) )\n", node->err.token.word, get_token_type_str(node->err.token.type));
+    case NODE_ERR:
+      printf("NODE_ERR( TOKEN( '%s', type = %s ) )\n", node->err.token.word, get_token_type_str(node->err.token.type));
       break;
     case NODE_IMM:
       printf("NODE_IMM( ");
@@ -49,4 +49,19 @@ char *get_bin_op(enum BinOp op) {
     case OP_DIV: return "OP_DIV";
   }
   return NULL;
+}
+
+/**
+ * frees an ast node if it needs to be
+ */
+void free_node(struct AstNode *node) {
+  if (node == NULL) return;
+
+  switch (node->type) {
+    case NODE_ERR:
+      token_free(&node->err.token);
+      break;
+    default:
+      break;
+  }
 }
