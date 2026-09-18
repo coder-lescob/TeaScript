@@ -84,6 +84,14 @@ struct Token lexer_peek_token(struct Lexer *lexer) {
   return lexer_consume_token(&sacrificial_lexer);
 }
 
+/**
+ * ignores the next token
+ */
+void lexer_ignore_token(struct Lexer *lexer) {
+  struct Token ignore = lexer_consume_token(lexer);
+  token_free(&ignore);
+}
+
 static bool is_identifier(char *buf, int buf_len) {
   if (buf_len == 0) return false;
 

@@ -21,6 +21,11 @@ struct Token lexer_consume_token(struct Lexer *lexer);
 struct Token lexer_peek_token(struct Lexer *lexer);
 
 /**
+ * ignores the next token
+ */
+void lexer_ignore_token(struct Lexer *lexer);
+
+/**
  * classifies a token from a string
  */
 int classify_token(char *buf, int buf_len);

@@ -110,10 +110,7 @@ size_t parse_expression(struct Parser *parser, struct Lexer *lexer, int binding_
     }
     
     // consume operator but ignore it since we already know what it's
-    {
-      struct Token ignore = lexer_consume_token(lexer);
-      token_free(&ignore);
-    }
+    lexer_ignore_token(lexer);
 
     // parse the right hand side
     size_t rhs = parse_expression(parser, lexer, power);
