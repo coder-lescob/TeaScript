@@ -18,13 +18,6 @@
  *                                      parser code                                           *
  **********************************************************************************************/
 
-/**********************************************************************************************
- *  WARNING: pointers used inside the parser code are relative.                               *
- *  Then they're made absolute when the parser_done is called.                                *
- *  So until the parser is marked done, the pointer fields of                                 *
- *  shall not be thought as valid.                                                            *
- **********************************************************************************************/
-
 /**
  * uses the syntax of teascript to parse a lexer
  * WARNING: parser must be freed after use (use free_parser).
@@ -61,6 +54,8 @@ size_t parse_operand(struct Parser *parser, struct Lexer *lexer) {
       token = lexer_consume_token(lexer);
       if (token.type != TOKEN_RPARENTHESES) {
         // oh, oh !
+        // now the lhs could leak memory so we need to free it recusivally
+        // TODO: fix that issue
         return create_syntax_error(parser, (struct ErrNode) { ERR_MISSING_CLOSE_PARENTHESE, token } );
       }
 
@@ -102,6 +97,7 @@ size_t parse_expression(struct Parser *parser, struct Lexer *lexer, int binding_
     int power = get_binding_powers(op.type);
     if (power == -1) { 
       // invalid operator
+      // lhs could leak here too
       return create_syntax_error(parser, (struct ErrNode) { ERR_EXPECTED_OP, op } );
     }
 
@@ -116,7 +112,7 @@ size_t parse_expression(struct Parser *parser, struct Lexer *lexer, int binding_
     size_t rhs = parse_expression(parser, lexer, power);
     
     // create the operation
-    lhs = create_binary_op_node(parser, (struct BinOpNode) { .op = get_bin_op_for_op(op.type), .A = (struct AstNode *)lhs, .B = (struct AstNode *)rhs } );
+    lhs = create_binary_op_node(parser, (struct BinOpNode) { .op = get_bin_op_for_op(op.type), .A = lhs, .B = rhs } );
     token_free(&op);
   }
   
@@ -140,16 +136,13 @@ int get_binding_powers(enum TokenType type) {
  * get the binary operator for any operator token
  */
 enum BinOp get_bin_op_for_op(enum TokenType type) {
-  // meh, no one care  TODO: make checks
+  // meh, no one cares  TODO: make checks
   return type - TOKEN_ADD;
 }
 
 /**********************************************************************************************
  *                              node/parser creation methods                                  *
  **********************************************************************************************/
-
-// the entire machinary is based on the idea that I can convert from size_t to uintptr_t and to pointer losslessly
-_Static_assert(sizeof(uintptr_t) >= sizeof(size_t), "uintptr_t cannot represent node offsets");
 
 /**
  * creates a new parser. Initialize it without any node;
@@ -208,29 +201,6 @@ void parser_done(struct Parser *parser) {
   
   // freeze the parser
   parser->done = true;
-
-  // fix all addresses
-  for (size_t i = 0; i < parser->node_count; i++) {
-    parser_fix_pointers(&parser->nodes[i], (uintptr_t)parser->nodes);
-  }
-}
-
-/**
- * fix the pointers attributes of an ast node.
- * adds offset to all the pointers attributes of a node.
- * WARNING: do not call that outside of parser internal functions.
- */
-void parser_fix_pointers(struct AstNode *node, uintptr_t offset) {
-  if (node == NULL) return;
-
-  switch (node->type) {
-    case NODE_BINARY_OP:
-      node->bin_op.A = (struct AstNode *)((uintptr_t)node->bin_op.A * sizeof(struct AstNode) + offset);
-      node->bin_op.B = (struct AstNode *)((uintptr_t)node->bin_op.B * sizeof(struct AstNode) + offset);
-      break;
-    default:
-      break;
-  }
 }
 
 /**
@@ -268,59 +238,45 @@ bool parser_push_node(struct Parser *parser, struct AstNode *node) {
   return true;
 }
 
-/**
- * create a syntax error node
- * WARNING: 0 is used as an error sentinel
- */
-size_t create_syntax_error(struct Parser *parser, struct ErrNode err) {
-  // create a new node
-  struct AstNode node             = (struct AstNode) { .type = NODE_ERR, .err = err };
-  size_t         relative_address = parser->node_count; // index
+static NodeRef create_node(struct Parser *parser, struct AstNode *node) {
+  NodeRef ref  = parser->node_count; // get index
 
   // push it to the parser
-  if (!parser_push_node(parser, &node)) {
+  if (!parser_push_node(parser, node)) {
     perror("node push failed");
-    return 0; // 0 is used as a sentinel because no sane node would point back to the root node.
+    return SIZE_MAX;
   }
 
   // return the relative ptr to the node
-  return relative_address;
+  return ref;
+}
+
+/**
+ * create a syntax error node
+ * NOTE: SIZE_MAX is used as an error sentinel
+ */
+NodeRef create_syntax_error(struct Parser *parser, struct ErrNode err) {
+  // create a new node
+  struct AstNode node = (struct AstNode) { .type = NODE_ERR, .err = err };
+  return create_node(parser, &node);
 }
 
 /**
  * creates an immediate node
- *  WARNING: 0 is used as an error sentinel.
+ * NOTE: SIZE_MAX is used as an error sentinel
  */
-size_t create_node_imm(struct Parser *parser, struct ImmNode imm) {
+NodeRef create_node_imm(struct Parser *parser, struct ImmNode imm) {
   // create a new node
-  struct AstNode node             = (struct AstNode) { .type = NODE_IMM, .imm = imm };
-  size_t         relative_address = parser->node_count; // index
-
-  // push it to the parser
-  if (!parser_push_node(parser, &node)) {
-    perror("node push failed");
-    return 0; // 0 is used as a sentinel because no sane node would point back to the root node.
-  }
-
-  // return the relative ptr to the node
-  return relative_address;
+  struct AstNode node = (struct AstNode) { .type = NODE_IMM, .imm = imm };
+  return create_node(parser, &node); 
 }
 
 /**
  * creates a binary operation node
- * WARNING: 0 is used as an error sentinel
+ * NOTE: SIZE_MAX is used as an error sentinel
  */
-size_t create_binary_op_node(struct Parser *parser, struct BinOpNode op) {
+NodeRef create_binary_op_node(struct Parser *parser, struct BinOpNode op) {
   // create a new node
-  struct AstNode node             = (struct AstNode) { .type = NODE_BINARY_OP, .bin_op = op };
-  size_t         relative_address = parser->node_count; // index
-
-  // push it to the parser
-  if (!parser_push_node(parser, &node)) {
-    perror("node push failed");
-    return 0; // 0 is used as a sentinel because no sane node would point back to the root node.
-  }
-
-  // return the relative ptr to the node
-  return relative_address;
+  struct AstNode node = (struct AstNode) { .type = NODE_BINARY_OP, .bin_op = op };
+  return create_node(parser, &node); 
 }

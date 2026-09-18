@@ -4,6 +4,10 @@
 #include "token.h"
 #include "value.h"
 
+#include <stddef.h>
+
+typedef size_t NodeRef;
+
 enum AstNodeType {
   NODE_ERR,
   NODE_IMM,
@@ -34,7 +38,7 @@ enum BinOp {
 
 struct BinOpNode {
   enum BinOp op;
-  struct AstNode *A, *B;
+  NodeRef A, B;
 };
 
 struct AstNode {
@@ -49,7 +53,7 @@ struct AstNode {
 /**
  * displays a given ast node
  */
-void display_ast_node(struct AstNode *node, int level);
+void display_ast_node(struct AstNode *nodes_base, struct AstNode *node, int level);
 
 /**
  * get the string representation of the operation

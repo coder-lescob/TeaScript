@@ -27,9 +27,7 @@ struct Parser {
   // the index of the root node
   size_t root_node;
   
-  // set when parsing is done, prohibates any further actions than reading from the lexer.
-  // any manual violation MUST not reallocate the `nodes` field otherwise all the pointers
-  // used by the ast nodes would be corrupted.
+  // set when parsing is done, prohibates any further actions than reading from the parser.
   bool done;
 };
 
@@ -45,12 +43,12 @@ struct Parser parse_lexer(struct Lexer *lexer);
 /**
  * parses the operand to an expression.
  */
-size_t parse_operand(struct Parser *parser, struct Lexer *lexer);
+NodeRef parse_operand(struct Parser *parser, struct Lexer *lexer);
 
 /**
  * parses an expression
  */
-size_t parse_expression(struct Parser *parser, struct Lexer *lexer, int binding_power);
+NodeRef parse_expression(struct Parser *parser, struct Lexer *lexer, int binding_power);
 
 /**
  * get the binding power of a token; -1 is returned when that's impossible to get.
@@ -86,33 +84,26 @@ void free_parser(struct Parser *parser);
 void parser_done(struct Parser *parser);
 
 /**
- * fix the pointers attributes of an ast node.
- * adds offset to all the pointers attributes of a node.
- * WARNING: do not call that outside of parser internal functions.
- */
-void parser_fix_pointers(struct AstNode *node, uintptr_t offset);
-
-/**
  * pushes a node to the parser's nodes
  */
 bool parser_push_node(struct Parser *parser, struct AstNode *node);
 
 /**
  * create a syntax error node
- * WARNING: 0 is used as an error sentinel
+ * NOTE: SIZE_MAX is used as an error sentinel
  */
-size_t create_syntax_error(struct Parser *parser, struct ErrNode err);
+NodeRef create_syntax_error(struct Parser *parser, struct ErrNode err);
 
 /**
  * creates an immediate node
- * WARNING: 0 is used as an error sentinel.
+ * NOTE: SIZE_MAX is used as an error sentinel
  */
-size_t create_node_imm(struct Parser *parser, struct ImmNode imm);
+NodeRef create_node_imm(struct Parser *parser, struct ImmNode imm);
 
 /**
  * creates a binary operation node
- * WARNING: 0 is used as an error sentinel
+ * NOTE: SIZE_MAX is used as an error sentinel
  */
-size_t create_binary_op_node(struct Parser *parser, struct BinOpNode op);
+NodeRef create_binary_op_node(struct Parser *parser, struct BinOpNode op);
 
 #endif

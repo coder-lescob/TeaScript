@@ -7,11 +7,9 @@
 /**
  * displays a given ast node
  */
-void display_ast_node(struct AstNode *node, int level) {
+void display_ast_node(struct AstNode *nodes_base, struct AstNode *node, int level) {
   if (node == NULL) return;
 
-  printf("[%p] ", (void *)node);
-  
   for (int i = 1; i < level; i++) {
     printf("|  ");
   }
@@ -30,9 +28,9 @@ void display_ast_node(struct AstNode *node, int level) {
       printf(" )\n");
       break;
     case NODE_BINARY_OP:
-      printf("NODE_BINARY_OP ( op = %s, %p, %p )\n", get_bin_op(node->bin_op.op), (void *)node->bin_op.A, (void *)node->bin_op.B);
-      display_ast_node(node->bin_op.A, level + 1);
-      display_ast_node(node->bin_op.B, level + 1);
+      printf("NODE_BINARY_OP ( op = %s )\n", get_bin_op(node->bin_op.op));
+      display_ast_node(nodes_base, &nodes_base[node->bin_op.A], level + 1);
+      display_ast_node(nodes_base, &nodes_base[node->bin_op.B], level + 1);
       break;
     default: break;
   }
