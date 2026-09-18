@@ -37,7 +37,7 @@ struct Parser parse_lexer(struct Lexer *lexer) {
 /**
  * parses the operand to an expression.
  */
-size_t parse_operand(struct Parser *parser, struct Lexer *lexer) {
+NodeRef parse_operand(struct Parser *parser, struct Lexer *lexer) {
   // consume the next token
   struct Token token = lexer_consume_token(lexer);
   
@@ -48,7 +48,7 @@ size_t parse_operand(struct Parser *parser, struct Lexer *lexer) {
       token_free(&token);
     
       // parse inside
-      size_t lhs = parse_expression(parser, lexer, 0);
+      NodeRef lhs = parse_expression(parser, lexer, 0);
     
       // consume token and if it isn't close parentheses then we're in truble
       token = lexer_consume_token(lexer);
@@ -80,11 +80,11 @@ size_t parse_operand(struct Parser *parser, struct Lexer *lexer) {
 /**
  * parses an expression
  */
-size_t parse_expression(struct Parser *parser, struct Lexer *lexer, int binding_power) {
+NodeRef parse_expression(struct Parser *parser, struct Lexer *lexer, int binding_power) {
   // parse operand
-  size_t lhs = parse_operand(parser, lexer);
+  NodeRef lhs = parse_operand(parser, lexer);
   
-  while (true) {
+  while (lhs != SIZE_MAX) {
     // get the operator without consuming it
     struct Token op = lexer_peek_token(lexer);
     if (op.type == TOKEN_EOF || op.type == TOKEN_RPARENTHESES) {
@@ -109,7 +109,7 @@ size_t parse_expression(struct Parser *parser, struct Lexer *lexer, int binding_
     lexer_ignore_token(lexer);
 
     // parse the right hand side
-    size_t rhs = parse_expression(parser, lexer, power);
+    NodeRef rhs = parse_expression(parser, lexer, power);
     
     // create the operation
     lhs = create_binary_op_node(parser, (struct BinOpNode) { .op = get_bin_op_for_op(op.type), .A = lhs, .B = rhs } );

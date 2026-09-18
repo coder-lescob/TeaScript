@@ -20,7 +20,7 @@ void display_ast_node(struct AstNode *nodes_base, struct AstNode *node, int leve
 
   switch (node->type) {
     case NODE_ERR:
-      printf("NODE_ERR( TOKEN( '%s', type = %s ) )\n", node->err.token.word, get_token_type_str(node->err.token.type));
+      printf("NODE_ERR( err = %s TOKEN( '%s', type = %s ) )\n", get_err_str(node->err.type), node->err.token.word, get_token_type_str(node->err.token.type));
       break;
     case NODE_IMM:
       printf("NODE_IMM( ");
@@ -47,6 +47,18 @@ char *get_bin_op(enum BinOp op) {
     case OP_DIV: return "OP_DIV";
   }
   return NULL;
+}
+
+/**
+ * get the string representation of an error
+ */
+char *get_err_str(enum ErrorType err) {
+  switch (err) {
+    case ERR_MISSING_CLOSE_PARENTHESE: return "ERR_MISSING_CLOSE_PARENTHESE";
+    case ERR_EXPECTED_EXPRESSION:      return "ERR_EXPECTED_EXPRESSION";
+    case ERR_EXPECTED_OP:              return "ERR_EXPECTED_OP";
+    default: return NULL;
+  }
 }
 
 /**
