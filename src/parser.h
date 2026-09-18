@@ -43,6 +43,11 @@ struct Parser {
 struct Parser parse_lexer(struct Lexer *lexer);
 
 /**
+ * parses the operand to an expression.
+ */
+size_t parse_operand(struct Parser *parser, struct Lexer *lexer);
+
+/**
  * parses an expression
  */
 size_t parse_expression(struct Parser *parser, struct Lexer *lexer, int binding_power);

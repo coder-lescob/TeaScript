@@ -42,44 +42,53 @@ struct Parser parse_lexer(struct Lexer *lexer) {
 }
 
 /**
+ * parses the operand to an expression.
+ */
+size_t parse_operand(struct Parser *parser, struct Lexer *lexer) {
+  // consume the next token
+  struct Token token = lexer_consume_token(lexer);
+  
+  switch (token.type) {
+    // opening parentheses
+    case TOKEN_LPARENTHESES:
+      // free the open parentheses
+      token_free(&token);
+    
+      // parse inside
+      size_t lhs = parse_expression(parser, lexer, 0);
+    
+      // consume token and if it isn't close parentheses then we're in truble
+      token = lexer_consume_token(lexer);
+      if (token.type != TOKEN_RPARENTHESES) {
+        // oh, oh !
+        return create_syntax_error(parser, (struct ErrNode) { ERR_MISSING_CLOSE_PARENTHESE, token } );
+      }
+
+      // free the close parentheses
+      token_free(&token);
+      return lhs;
+    // a number
+    case TOKEN_INT_LITERAL:
+    case TOKEN_FLOAT_LITERAL:
+      // creates a Value from the literal
+      struct Value value = value_from_token_literal(token);
+      token_free(&token); // free the token since we don't need it anymore
+    
+      // create an immediate node
+      return create_node_imm(parser, (struct ImmNode) { value } );
+    // oopsy
+    default:
+      return create_syntax_error(parser, (struct ErrNode) { ERR_EXPECTED_EXPRESSION, token } );
+  }
+}
+
+/**
  * parses an expression
  */
 size_t parse_expression(struct Parser *parser, struct Lexer *lexer, int binding_power) {
-  // consume the token
-  size_t lhs;
-  struct Token token = lexer_consume_token(lexer);
+  // parse operand
+  size_t lhs = parse_operand(parser, lexer);
   
-  // opening parentheses
-  if (token.type == TOKEN_LPARENTHESES) {
-    // free the open parentheses
-    token_free(&token);
-    
-    // parse inside
-    lhs = parse_expression(parser, lexer, 0);
-    
-    // consume token and if it isn't close parentheses then we're in truble
-    token = lexer_consume_token(lexer);
-    if (token.type != TOKEN_RPARENTHESES) {
-      // oh, oh !
-      return create_syntax_error(parser, (struct ErrNode) { ERR_MISSING_CLOSE_PARENTHESE, token } );
-    }
-
-    // free the close parentheses
-    token_free(&token);
-  }
-  // a number
-  else if (token.type == TOKEN_INT_LITERAL || token.type == TOKEN_FLOAT_LITERAL) {
-    // creates a Value from the literal
-    struct Value value = value_from_token_literal(token);
-    token_free(&token); // free the token since we don't need it anymore
-    
-    // create an immediate node
-    lhs = create_node_imm(parser, (struct ImmNode) { value } );
-  }
-  else {
-    return create_syntax_error(parser, (struct ErrNode) { ERR_EXPECTED_EXPRESSION, token } );
-  }
-
   while (true) {
     // get the operator without consuming it
     struct Token op = lexer_peek_token(lexer);
