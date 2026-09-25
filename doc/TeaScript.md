@@ -467,6 +467,14 @@ func oopsy() {
 
 More generally if an error has a meaning to be somewhere then it is else it's returned by the current function.
 
+#### Composition
+
+When two an operation is tried on an error it creates a new error which stores the previous error inside. e.i.
+
+```TeaScript
+let x = (10 / 0) + 3; // now x == Err<CannotAdd>(Err<DivisionByZero>(10), 3)
+```
+
 #### User defined errors
 
 You can define your own error type by creating a struct. Note that this struct must implement the behavior `ErrDisplay` which will modify how the error is shown to the user of your program.
