@@ -7,7 +7,7 @@ TEST  := tests
 
 CFLAGS := -Wall -Wextra -Wpedantic -I$(SRC) -g
 CFLAGS += -MMD -MP
-LDFLAGS := #-fsanitize=address
+LDFLAGS := -fsanitize=address
 
 INTERPRETER_SRC := $(wildcard $(SRC)/*.c)
 TEST_SRC        := $(wildcard $(TEST)/*.c)

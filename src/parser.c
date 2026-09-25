@@ -27,7 +27,7 @@ struct Parser parse_lexer(struct Lexer *lexer) {
   create_parser(&parser);
   
   // parse as an expression
-  parser.root_node = parse_expression(&parser, lexer, 0);
+  parser.root_node = parse_let_binding(&parser, lexer);
   
   // mark as done
   parser_done(&parser);
@@ -35,9 +35,54 @@ struct Parser parse_lexer(struct Lexer *lexer) {
 }
 
 /**
+ * parses a binding
+ */
+NodeRef parse_let_binding(struct Parser *parser, struct Lexer *lexer) {
+  if (parser == NULL || lexer == NULL) return SIZE_MAX;
+  
+  // consume the token
+  struct Token token = lexer_consume_token(lexer);
+  if (token.type != TOKEN_LET) {
+    TokenID tok = push_token(parser, &token);
+    return create_syntax_error(parser, (struct ErrNode) { ERR_EXPECTED_BINDING, tok } );
+  }
+  token_free(&token);
+  
+  // get the var name
+  struct Token name = lexer_consume_token(lexer);
+  TokenID nameID    = push_token(parser, &name);
+  
+  // verify ID
+  if (parser->token_table[nameID].type != TOKEN_IDENTIFIER) {
+    return create_syntax_error(parser, (struct ErrNode) { ERR_EXPECTED_IDENTIFIER, nameID } );
+  }
+
+  struct Token eq = lexer_consume_token(lexer);
+  if (eq.type != TOKEN_ASSIGN_EQ) {
+    TokenID eq_id = push_token(parser, &eq);
+    return create_syntax_error(parser, (struct ErrNode) { ERR_EXPECTED_EQ_ASSIGN, eq_id } );
+  }
+  token_free(&eq);
+  
+  // parse the expression
+  NodeRef expr = parse_expression(parser, lexer, 0);
+  
+  struct Token semi_colon = lexer_consume_token(lexer);
+  if (semi_colon.type != TOKEN_SEMI_COLON) {
+    TokenID not_semi_colon = push_token(parser, &semi_colon);
+    return create_syntax_error(parser, (struct ErrNode) { ERR_EXPECTED_SEMI_COLON, not_semi_colon });
+  }
+  token_free(&semi_colon);
+
+  return create_let_binding_node(parser, (struct LetBindingNode) { nameID, expr } );
+}
+
+/**
  * parses the operand to an expression.
  */
 NodeRef parse_operand(struct Parser *parser, struct Lexer *lexer) {
+  if (parser == NULL || lexer == NULL) return SIZE_MAX;
+
   // consume the next token
   struct Token token = lexer_consume_token(lexer);
   
@@ -54,9 +99,8 @@ NodeRef parse_operand(struct Parser *parser, struct Lexer *lexer) {
       token = lexer_consume_token(lexer);
       if (token.type != TOKEN_RPARENTHESES) {
         // oh, oh !
-        // now the lhs could leak memory so we need to free it recusivally
-        // TODO: fix that issue
-        return create_syntax_error(parser, (struct ErrNode) { ERR_MISSING_CLOSE_PARENTHESE, token } );
+        TokenID tok = push_token(parser, &token);
+        return create_syntax_error(parser, (struct ErrNode) { ERR_MISSING_CLOSE_PARENTHESE, tok } );
       }
 
       // free the close parentheses
@@ -73,7 +117,8 @@ NodeRef parse_operand(struct Parser *parser, struct Lexer *lexer) {
       return create_node_imm(parser, (struct ImmNode) { value } );
     // oopsy
     default:
-      return create_syntax_error(parser, (struct ErrNode) { ERR_EXPECTED_EXPRESSION, token } );
+      TokenID tok = push_token(parser, &token);
+      return create_syntax_error(parser, (struct ErrNode) { ERR_EXPECTED_EXPRESSION, tok } );
   }
 }
 
@@ -81,13 +126,15 @@ NodeRef parse_operand(struct Parser *parser, struct Lexer *lexer) {
  * parses an expression
  */
 NodeRef parse_expression(struct Parser *parser, struct Lexer *lexer, int binding_power) {
+  if (parser == NULL || lexer == NULL) return SIZE_MAX;
+
   // parse operand
   NodeRef lhs = parse_operand(parser, lexer);
   
   while (lhs != SIZE_MAX) {
     // get the operator without consuming it
     struct Token op = lexer_peek_token(lexer);
-    if (op.type == TOKEN_EOF || op.type == TOKEN_RPARENTHESES) {
+    if (op.type == TOKEN_EOF || op.type == TOKEN_RPARENTHESES || op.type == TOKEN_SEMI_COLON) {
       // we're done!
       token_free(&op);
       break;
@@ -97,11 +144,12 @@ NodeRef parse_expression(struct Parser *parser, struct Lexer *lexer, int binding
     int power = get_binding_powers(op.type);
     if (power == -1) { 
       // invalid operator
-      // lhs could leak here too
-      return create_syntax_error(parser, (struct ErrNode) { ERR_EXPECTED_OP, op } );
+      TokenID tok = push_token(parser, &op);
+      return create_syntax_error(parser, (struct ErrNode) { ERR_EXPECTED_OP, tok } );
     }
 
     if (binding_power > power) {
+      token_free(&op);
       break;
     }
     
@@ -170,9 +218,6 @@ bool create_parser(struct Parser *parser) {
 void free_parser(struct Parser *parser) {
   if (parser == NULL) return;
   
-  // cache the node count
-  size_t node_count = parser->node_count;
-  
   // set capacity and sizes to 0
   parser->capacity   = 0;
   parser->node_count = 0;
@@ -181,13 +226,24 @@ void free_parser(struct Parser *parser) {
 
   // free all the nodes
   if (parser->nodes != NULL) {
-    // free all nodes that need to be
-    for (size_t i = 0; i < node_count; i++) {
-      free_node(&parser->nodes[i]);
-    }
-
     free(parser->nodes);
     parser->nodes = NULL; // avoid dangling ptr
+  }
+  
+  size_t token_count = parser->token_count;
+
+  parser->token_capacity = 0;
+  parser->token_count = 0;
+
+  // free all tokens
+  if (parser->token_table != NULL) {
+    // free all tokens
+    for (size_t i = 0; i < token_count; i++) {
+      token_free(parser->token_table + i);
+    }
+
+    free(parser->token_table);
+    parser->token_table = NULL;
   }
 }
 
@@ -279,4 +335,86 @@ NodeRef create_binary_op_node(struct Parser *parser, struct BinOpNode op) {
   // create a new node
   struct AstNode node = (struct AstNode) { .type = NODE_BINARY_OP, .bin_op = op };
   return create_node(parser, &node); 
+}
+
+/**
+ * creates a let binding node
+ * NOTE: SIZE_MAX is used as an error sentinel
+ */
+NodeRef create_let_binding_node(struct Parser *parser, struct LetBindingNode let) {
+  struct AstNode node = { .type = NODE_LET_BINDING, .let_binding = let };
+  return create_node(parser, &node);
+}
+
+/**
+ * pushes a token to the token table and return it's index
+ * NOTE: if it fails to push the token gets freed, but 
+ * if it succeed the ownership of the token is for the token_table thus token is set to { NULL, TOKEN_ILLEGAL }
+ */
+TokenID push_token(struct Parser *parser, struct Token *token) {
+  if (parser == NULL || token == NULL) {
+    errno = EINVAL;
+    return SIZE_MAX; 
+  }
+
+   if (parser->done) {
+    errno = EPERM;
+    return SIZE_MAX;
+  }
+
+  if (parser->token_count + 1 > parser->token_capacity) {
+    // we shall reallocate
+    size_t new_capacity           = 2 * parser->token_capacity + 1;
+    struct Token *new_token_table = realloc(parser->token_table, new_capacity * sizeof(struct Token));
+
+    if (new_token_table == NULL) {
+      // allocation failed
+      token_free(token);
+      return SIZE_MAX;
+    }
+    
+    // most of the time...
+    parser->token_table = new_token_table;
+    parser->token_capacity = new_capacity;
+  }
+  
+  // push!
+  parser->token_table[parser->token_count++] = *token;
+
+  return parser->token_count - 1;
+}
+
+/**
+ * displays a given ast node
+ */
+void display_ast_node(struct Parser *parser, struct AstNode *node, int level) {
+  if (node == NULL || parser == NULL) return;
+
+  for (int i = 1; i < level; i++) {
+    printf("|  ");
+  }
+
+  if (level > 0) {
+    printf("|- ");
+  }
+
+  switch (node->type) {
+    case NODE_ERR:
+      printf("NODE_ERR( err = %s TOKEN( '%s', type = %s ) )\n", get_err_str(node->err.type), parser->token_table[node->err.token].word, get_token_type_str(parser->token_table[node->err.token].type));
+      break;
+    case NODE_IMM:
+      printf("NODE_IMM( ");
+      print_value(&node->imm.imm);
+      printf(" )\n");
+      break;
+    case NODE_BINARY_OP:
+      printf("NODE_BINARY_OP ( op = %s )\n", get_bin_op(node->bin_op.op));
+      display_ast_node(parser, &parser->nodes[node->bin_op.A], level + 1);
+      display_ast_node(parser, &parser->nodes[node->bin_op.B], level + 1);
+      break;
+    case NODE_LET_BINDING:
+      printf("NODE_LET_BINDING ( '%s' )\n", parser->token_table[node->let_binding.id].word);
+      display_ast_node(parser, &parser->nodes[node->let_binding.expr], level + 1);
+    default: break;
+  }
 }

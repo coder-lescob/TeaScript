@@ -16,6 +16,7 @@
 
 #include <stdlib.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <stdbool.h>
 
 struct Parser {
@@ -23,6 +24,11 @@ struct Parser {
   struct AstNode *nodes;
   size_t capacity;
   size_t node_count;
+  
+  // a dynamic stack to store all tokens
+  struct Token *token_table;
+  size_t token_capacity;
+  size_t token_count;
   
   // the index of the root node
   size_t root_node;
@@ -39,6 +45,11 @@ struct Parser {
  * uses the syntax of teascript to parse a lexer
  */
 struct Parser parse_lexer(struct Lexer *lexer);
+
+/**
+ * parses a binding
+ */
+NodeRef parse_let_binding(struct Parser *parser, struct Lexer *lexer);
 
 /**
  * parses the operand to an expression.
@@ -105,5 +116,23 @@ NodeRef create_node_imm(struct Parser *parser, struct ImmNode imm);
  * NOTE: SIZE_MAX is used as an error sentinel
  */
 NodeRef create_binary_op_node(struct Parser *parser, struct BinOpNode op);
+
+/**
+ * creates a let binding node
+ * NOTE: SIZE_MAX is used as an error sentinel
+ */
+NodeRef create_let_binding_node(struct Parser *parser, struct LetBindingNode let);
+
+/**
+ * pushes a token to the token table and return it's index
+ * NOTE: if it fails to push the token gets freed, but 
+ * if it succeed the ownership of the token is for the token_table thus token is set to { NULL, TOKEN_ILLEGAL }
+ */
+TokenID push_token(struct Parser *parser, struct Token *token);
+
+/**
+ * displays a given ast node
+ */
+void display_ast_node(struct Parser *parser, struct AstNode *node, int level);
 
 #endif
