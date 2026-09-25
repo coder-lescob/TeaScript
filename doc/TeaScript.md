@@ -1,6 +1,6 @@
 # TeaScript
 
-TeaScript is my high-level interpreted programming language. It's licensed under GPL v3. TeaScript is the result of me poking around and programming in various programming languages: C, C++, Rust, Python and even JavaScript (even tho I didn't do a lot of it). I liked some concepts of all these languages but they always had some less good features e.g. coercions in JavaScript, too much strictness, while also restraining the freedom in Rust, not enough garentee in C/C++. All theses made me come to the logical conclusion that altho there are some good idea, none of them is perfect. So since none is perfect, let's create the perfect one. I should specify that with TeaScript I'm actually doing the high-level part of the spectrum, the low-level will be with Steel.
+TeaScript is my high-level interpreted programming language. It's licensed under GPL v3. TeaScript is the result of me poking around and programming in various programming languages: C, C++, Rust, Python and even JavaScript (even tho I didn't do a lot of it). I liked some concepts of all these languages but they always had some less good features e.g. coercions in JavaScript, too much strictness, while also restraining the freedom in Rust, not enough garentee in C/C++. All theses made me come to the logical conclusion that altho there are some good idea, none of them is perfect. So since none is perfect, let's create the perfect one. I should specify that with TeaScript I'm actually doing the high-level part of the spectrum.
 
 ## The promise
 
