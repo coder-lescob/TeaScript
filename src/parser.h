@@ -39,6 +39,9 @@ struct Parser {
   
   // set when parsing is done, prohibates any further actions than reading from the parser.
   bool done;
+
+  // is there any error?
+  bool err;
 };
 
 /**********************************************************************************************

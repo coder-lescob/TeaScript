@@ -142,7 +142,7 @@ NodeRef parse_expression(struct Parser *parser, struct Lexer *lexer, float bindi
     
     // get binding power
     BindingPower power = get_binding_powers(op.type);
-    if (power.lhs == -1.0f && power.lhs == power.rhs) { 
+    if (power.lhs == -1.0f) {
       // invalid operator
       TokenID tok = push_token(parser, &op);
       return create_syntax_error(parser, (struct ErrNode) { ERR_EXPECTED_OP, tok } );
@@ -314,6 +314,10 @@ static NodeRef create_node(struct Parser *parser, struct AstNode *node) {
  */
 NodeRef create_syntax_error(struct Parser *parser, struct ErrNode err) {
   // create a new node
+  // set the err flag to true;
+  parser->err = true;
+
+  // push the node
   struct AstNode node = (struct AstNode) { .type = NODE_ERR, .err = err };
   return create_node(parser, &node);
 }

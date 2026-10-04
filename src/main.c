@@ -25,9 +25,24 @@ int main(int argc, char **argv) {
   
   struct Lexer lexer = CREATE_LEXER(code);
   struct Parser parser = parse_lexer(&lexer);
-  display_ast_node(&parser, &parser.nodes[parser.root_node], 0);
-  free_parser(&parser);
 
+  if (!parser.err) {
+    display_ast_node(&parser, &parser.nodes[parser.root_node], 0);
+  }
+  else {
+    
+    // syntax Errors occured
+    printf("Errors:\n");
+
+    // check for any node if it is an error node
+    for (size_t i = 0; i < parser.node_count; i++) {
+      if (parser.nodes[i].type != NODE_ERR) continue;
+      display_ast_node(&parser, &parser.nodes[i], 0);
+    }
+  }
+  
+  // resource cleaning...
+  free_parser(&parser);
   free(code);
 
   return 0;
