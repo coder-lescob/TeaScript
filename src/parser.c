@@ -13,6 +13,7 @@
 
 #include <stdbool.h>
 #include <errno.h>
+#include <math.h>
 
 /**********************************************************************************************
  *                                      parser code                                           *
@@ -142,7 +143,7 @@ NodeRef parse_expression(struct Parser *parser, struct Lexer *lexer, float bindi
     
     // get binding power
     BindingPower power = get_binding_powers(op.type);
-    if (power.lhs == -1.0f) {
+    if (isnan(power.lhs) || isnan(power.rhs)) {
       // invalid operator
       TokenID tok = push_token(parser, &op);
       return create_syntax_error(parser, (struct ErrNode) { ERR_EXPECTED_OP, tok } );
@@ -169,7 +170,7 @@ NodeRef parse_expression(struct Parser *parser, struct Lexer *lexer, float bindi
 
 /**
  * get the binding power of a token; 
- * { -1.0f, -1.0f } is returned when that's impossible to get aka operator invalid
+ * { NAN, NAN } is returned when that's impossible to get aka operator invalid
  */
 BindingPower get_binding_powers(enum TokenType type) {
   switch (type) {
@@ -177,7 +178,7 @@ BindingPower get_binding_powers(enum TokenType type) {
     case TOKEN_SUB: return (BindingPower) { 1.0f, 1.1f };
     case TOKEN_MUL: 
     case TOKEN_DIV: return (BindingPower) { 2.0f, 2.1f };
-    default: return (BindingPower) { -1.0f, -1.0f };
+    default: return (BindingPower) { NAN, NAN };
   }
 }
 
