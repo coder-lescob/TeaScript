@@ -65,6 +65,11 @@ struct StaticBindingNode {
   NodeRef expr;
 };
 
+struct ScopeNode {
+  NodeRef *refs;
+  size_t refc;
+};
+
 struct AstNode {
   enum AstNodeType type;
   union {

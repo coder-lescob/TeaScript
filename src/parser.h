@@ -19,6 +19,10 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+typedef struct {
+  float lhs, rhs;
+} BindingPower;
+
 struct Parser {
   // a dynamic stack to store all the nodes.
   struct AstNode *nodes;
@@ -59,12 +63,12 @@ NodeRef parse_operand(struct Parser *parser, struct Lexer *lexer);
 /**
  * parses an expression
  */
-NodeRef parse_expression(struct Parser *parser, struct Lexer *lexer, int binding_power);
+NodeRef parse_expression(struct Parser *parser, struct Lexer *lexer, float binding_power);
 
 /**
  * get the binding power of a token; -1 is returned when that's impossible to get.
  */
-int get_binding_powers(enum TokenType type);
+BindingPower get_binding_powers(enum TokenType type);
 
 /**
  * get the binary operator for any operator token

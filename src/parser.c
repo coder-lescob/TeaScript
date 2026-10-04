@@ -125,7 +125,7 @@ NodeRef parse_operand(struct Parser *parser, struct Lexer *lexer) {
 /**
  * parses an expression
  */
-NodeRef parse_expression(struct Parser *parser, struct Lexer *lexer, int binding_power) {
+NodeRef parse_expression(struct Parser *parser, struct Lexer *lexer, float binding_power) {
   if (parser == NULL || lexer == NULL) return SIZE_MAX;
 
   // parse operand
@@ -141,14 +141,14 @@ NodeRef parse_expression(struct Parser *parser, struct Lexer *lexer, int binding
     }
     
     // get binding power
-    int power = get_binding_powers(op.type);
-    if (power == -1) { 
+    BindingPower power = get_binding_powers(op.type);
+    if (power.lhs == -1.0f && power.lhs == power.rhs) { 
       // invalid operator
       TokenID tok = push_token(parser, &op);
       return create_syntax_error(parser, (struct ErrNode) { ERR_EXPECTED_OP, tok } );
     }
 
-    if (binding_power > power) {
+    if (power.lhs < binding_power) {
       token_free(&op);
       break;
     }
@@ -157,7 +157,7 @@ NodeRef parse_expression(struct Parser *parser, struct Lexer *lexer, int binding
     lexer_ignore_token(lexer);
 
     // parse the right hand side
-    NodeRef rhs = parse_expression(parser, lexer, power);
+    NodeRef rhs = parse_expression(parser, lexer, power.rhs);
     
     // create the operation
     lhs = create_binary_op_node(parser, (struct BinOpNode) { .op = get_bin_op_for_op(op.type), .A = lhs, .B = rhs } );
@@ -168,15 +168,16 @@ NodeRef parse_expression(struct Parser *parser, struct Lexer *lexer, int binding
 }
 
 /**
- * get the binding power of a token; -1 is returned when that's impossible to get.
+ * get the binding power of a token; 
+ * { -1.0f, -1.0f } is returned when that's impossible to get aka operator invalid
  */
-int get_binding_powers(enum TokenType type) {
+BindingPower get_binding_powers(enum TokenType type) {
   switch (type) {
-    case TOKEN_ADD: return 0;
-    case TOKEN_SUB: return 0;
-    case TOKEN_MUL: return 1;
-    case TOKEN_DIV: return 1;
-    default: return -1;
+    case TOKEN_ADD: 
+    case TOKEN_SUB: return (BindingPower) { 1.0f, 1.1f };
+    case TOKEN_MUL: 
+    case TOKEN_DIV: return (BindingPower) { 2.0f, 2.1f };
+    default: return (BindingPower) { -1.0f, -1.0f };
   }
 }
 
