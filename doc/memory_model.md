@@ -22,8 +22,7 @@ let a = 5;
 let b = f(5);
 ```
 
-|    Stack top t=0  |    Stack top (one call of f)  |  Stack top | Stack top  |  Stack top (on return)  |  Stack top (after y assignment) |
-|-------------------|-------------------------------|------------|------------|-------------------------|---------------------------------|
-|                   |                               | Value(10)  | Value(11)  |                         |                                 |
-|                   |          Value(5)             | Value(5)   | Value(5)   |      Value(11)          |           Value(11)             |
-|      Value(5)     |          Value(5)             | Value(5)   | Value(5)   |      Value(5)           |           Value(5)              |
+|    Stack top t=0  |    Stack top (one call of f)  | Stack top (on return)  |  Stack top (after y assignment) |
+|-------------------|-------------------------------|------------------------|---------------------------------|
+|                   |          Value(5)             |      Value(11)         |           Value(11)             |
+|      Value(5)     |          Value(5)             |      Value(5)          |           Value(5)              |
