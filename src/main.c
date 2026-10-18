@@ -27,7 +27,7 @@ int main(int argc, char **argv) {
   struct Parser parser = parse_lexer(&lexer);
 
   if (!parser.err) {
-    display_ast_node(&parser, &parser.nodes[parser.root_node], 0);
+    display_ast(&parser, (struct AstNode *)parser.nodes.data + parser.root_node, 0);
   }
   else {
     
@@ -35,9 +35,9 @@ int main(int argc, char **argv) {
     printf("Errors:\n");
 
     // check for any node if it is an error node
-    for (size_t i = 0; i < parser.node_count; i++) {
-      if (parser.nodes[i].type != NODE_ERR) continue;
-      display_ast_node(&parser, &parser.nodes[i], 0);
+    for (size_t i = 0; i < parser.nodes.count; i++) {
+      if (((struct AstNode *)parser.nodes.data + i)->type != NODE_ERR) continue;
+      display_ast(&parser, (struct AstNode *)parser.nodes.data + i, 0);
     }
   }
   

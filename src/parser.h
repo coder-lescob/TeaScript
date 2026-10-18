@@ -8,6 +8,7 @@
 #ifndef PARSER_H
 #define PARSER_H
 
+#include "vec.h"
 #include "token.h"
 #include "lexer.h"
 #include "value.h"
@@ -25,15 +26,11 @@ typedef struct {
 
 struct Parser {
   // a dynamic stack to store all the nodes.
-  struct AstNode *nodes;
-  size_t capacity;
-  size_t node_count;
+  struct Vec nodes;
   
   // a dynamic stack to store all tokens
-  struct Token *token_table;
-  size_t token_capacity;
-  size_t token_count;
-  
+  struct Vec token_table;
+
   // the index of the root node
   size_t root_node;
   
@@ -140,6 +137,6 @@ TokenID push_token(struct Parser *parser, struct Token *token);
 /**
  * displays a given ast node
  */
-void display_ast_node(struct Parser *parser, struct AstNode *node, int level);
+void display_ast(struct Parser *parser, struct AstNode *node, int level);
 
 #endif

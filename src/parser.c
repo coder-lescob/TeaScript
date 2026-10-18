@@ -52,9 +52,9 @@ NodeRef parse_let_binding(struct Parser *parser, struct Lexer *lexer) {
   // get the var name
   struct Token name = lexer_consume_token(lexer);
   TokenID nameID    = push_token(parser, &name);
-  
+
   // verify ID
-  if (parser->token_table[nameID].type != TOKEN_IDENTIFIER) {
+  if (((struct Token *)parser->token_table.data + nameID)->type != TOKEN_IDENTIFIER) {
     return create_syntax_error(parser, (struct ErrNode) { ERR_EXPECTED_IDENTIFIER, nameID } );
   }
 
@@ -198,17 +198,17 @@ enum BinOp get_bin_op_for_op(enum TokenType type) {
  * creates a new parser. Initialize it without any node;
  */
 bool create_parser(struct Parser *parser) {
-  if (parser == NULL || parser->nodes != NULL) {
+  if (parser == NULL) {
     errno = EINVAL;
     return false;
   }
   
   // init fields
-  parser->nodes      = NULL;
-  parser->capacity   = 0;
-  parser->node_count = 0;
-  parser->done       = false;
-  parser->root_node  = 0;
+  parser->nodes       = vec_new(struct AstNode);
+  parser->token_table = vec_new(struct Token);
+  parser->done        = false;
+  parser->root_node   = 0;
+  parser->err         = false;
 
   return true;
 }
@@ -221,32 +221,20 @@ void free_parser(struct Parser *parser) {
   if (parser == NULL) return;
   
   // set capacity and sizes to 0
-  parser->capacity   = 0;
-  parser->node_count = 0;
   parser->done       = true;
   parser->root_node  = 0;
 
   // free all the nodes
-  if (parser->nodes != NULL) {
-    free(parser->nodes);
-    parser->nodes = NULL; // avoid dangling ptr
-  }
+  vec_free(&parser->nodes);
   
-  size_t token_count = parser->token_count;
-
-  parser->token_capacity = 0;
-  parser->token_count = 0;
-
   // free all tokens
-  if (parser->token_table != NULL) {
-    // free all tokens
-    for (size_t i = 0; i < token_count; i++) {
-      token_free(parser->token_table + i);
+  if (parser->token_table.data != NULL) {
+    for (size_t i = 0; i < parser->token_table.count; i++) {
+      token_free((struct Token *)parser->token_table.data + i);
     }
-
-    free(parser->token_table);
-    parser->token_table = NULL;
   }
+
+  vec_free(&parser->token_table);
 }
 
 /**
@@ -255,7 +243,7 @@ void free_parser(struct Parser *parser) {
  * or any other node creation method would result in an error operation not permitted.
  */
 void parser_done(struct Parser *parser) {
-  if (parser == NULL || parser->nodes == NULL) return;
+  if (parser == NULL) return;
   
   // freeze the parser
   parser->done = true;
@@ -265,39 +253,11 @@ void parser_done(struct Parser *parser) {
  * pushes a node to the parser's nodes
  */
 bool parser_push_node(struct Parser *parser, struct AstNode *node) {
-  if (parser == NULL || node == NULL) { 
-    errno = EINVAL;
-    return false; 
-  }
-
-  if (parser->done) {
-    errno = EPERM;
-    return false;
-  }
-
-  if (parser->node_count + 1 > parser->capacity || parser->nodes == NULL) {
-    // oopsy there isn't enough place allocated...
-    size_t new_capacity = parser->capacity * 2 + 1; // add 1 because 2 * 0 == 0 and we really want more place
-    struct AstNode *nodes_reallocated = realloc(parser->nodes, new_capacity * sizeof(struct AstNode));
-
-    if (nodes_reallocated == NULL) {
-      // oopsy allocation failed, errno set by realloc
-      return false;
-    }
-
-    // allocation successful
-    parser->nodes    = nodes_reallocated;
-    parser->capacity = new_capacity;
-  }
-  
-  // push it!
-  parser->nodes[parser->node_count++] = *node;
-
-  return true;
+  return vec_push(&parser->nodes, (void *)node) == 0;
 }
 
 static NodeRef create_node(struct Parser *parser, struct AstNode *node) {
-  NodeRef ref  = parser->node_count; // get index
+  NodeRef ref  = parser->nodes.count; // get index
 
   // push it to the parser
   if (!parser_push_node(parser, node)) {
@@ -360,40 +320,36 @@ NodeRef create_let_binding_node(struct Parser *parser, struct LetBindingNode let
 TokenID push_token(struct Parser *parser, struct Token *token) {
   if (parser == NULL || token == NULL) {
     errno = EINVAL;
+    token_free(token);
     return SIZE_MAX; 
   }
 
    if (parser->done) {
     errno = EPERM;
+    token_free(token);
     return SIZE_MAX;
   }
-
-  if (parser->token_count + 1 > parser->token_capacity) {
-    // we shall reallocate
-    size_t new_capacity           = 2 * parser->token_capacity + 1;
-    struct Token *new_token_table = realloc(parser->token_table, new_capacity * sizeof(struct Token));
-
-    if (new_token_table == NULL) {
-      // allocation failed
-      token_free(token);
-      return SIZE_MAX;
-    }
-    
-    // most of the time...
-    parser->token_table = new_token_table;
-    parser->token_capacity = new_capacity;
-  }
+  
+  // get the index of the new token
+  size_t idx = parser->token_table.count;
   
   // push!
-  parser->token_table[parser->token_count++] = *token;
+  if (vec_push(&parser->token_table, token) != 0) {
+    token_free(token);
+    return SIZE_MAX;
+  }
+  
+  // avoid dangling
+  token->word = NULL;
+  token->type = TOKEN_ILLEGAL;
 
-  return parser->token_count - 1;
+  return idx;
 }
 
 /**
  * displays a given ast node
  */
-void display_ast_node(struct Parser *parser, struct AstNode *node, int level) {
+void display_ast(struct Parser *parser, struct AstNode *node, int level) {
   if (node == NULL || parser == NULL) return;
 
   for (int i = 1; i < level; i++) {
@@ -406,7 +362,11 @@ void display_ast_node(struct Parser *parser, struct AstNode *node, int level) {
 
   switch (node->type) {
     case NODE_ERR:
-      printf("NODE_ERR( err = %s TOKEN( '%s', type = %s ) )\n", get_err_str(node->err.type), parser->token_table[node->err.token].word, get_token_type_str(parser->token_table[node->err.token].type));
+      printf("NODE_ERR( err = %s TOKEN( '%s', type = %s ) )\n", 
+             get_err_str(node->err.type), 
+             ((struct Token *)parser->token_table.data + node->err.token)->word,
+             get_token_type_str(((struct Token *)parser->token_table.data + node->err.token)->type)
+      );
       break;
     case NODE_IMM:
       printf("NODE_IMM( ");
@@ -415,12 +375,15 @@ void display_ast_node(struct Parser *parser, struct AstNode *node, int level) {
       break;
     case NODE_BINARY_OP:
       printf("NODE_BINARY_OP ( op = %s )\n", get_bin_op(node->bin_op.op));
-      display_ast_node(parser, &parser->nodes[node->bin_op.A], level + 1);
-      display_ast_node(parser, &parser->nodes[node->bin_op.B], level + 1);
+      display_ast(parser, (struct AstNode *)parser->nodes.data + node->bin_op.A, level + 1);
+      display_ast(parser, (struct AstNode *)parser->nodes.data + node->bin_op.B, level + 1);
       break;
     case NODE_LET_BINDING:
-      printf("NODE_LET_BINDING ( '%s' )\n", parser->token_table[node->let_binding.id].word);
-      display_ast_node(parser, &parser->nodes[node->let_binding.expr], level + 1);
-    default: break;
+      printf("NODE_LET_BINDING ( '%s' )\n", ((struct Token *)parser->token_table.data + node->let_binding.id)->word);
+      display_ast(parser, (struct AstNode *)parser->nodes.data + node->let_binding.expr, level + 1);
+      break;
+    default:
+      printf("UNKNOWN_NODE ( %d )\n", node->type);
+      break;
   }
 }

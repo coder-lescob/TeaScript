@@ -79,6 +79,7 @@ struct AstNode {
     struct LetBindingNode let_binding;
     struct ConstBindingNode const_binding;
     struct StaticBindingNode static_binding;
+    struct ScopeNode scope;
   };
 };
 
