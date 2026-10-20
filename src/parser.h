@@ -25,10 +25,9 @@ typedef struct {
 } BindingPower;
 
 struct Parser {
-  // a dynamic stack to store all the nodes.
+
+  // I used vectors to store the nodes and the token useful to parsing
   struct Vec nodes;
-  
-  // a dynamic stack to store all tokens
   struct Vec token_table;
 
   // the index of the root node
