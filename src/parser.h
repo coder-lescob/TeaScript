@@ -20,6 +20,12 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+typedef struct AstNode AstNode;
+typedef struct Token   Token;
+
+VEC_DECL(AstNode)
+VEC_DECL(Token)
+
 typedef struct {
   float lhs, rhs;
 } BindingPower;
@@ -27,8 +33,8 @@ typedef struct {
 struct Parser {
 
   // I used vectors to store the nodes and the token useful to parsing
-  struct Vec nodes;
-  struct Vec token_table;
+  Vec(AstNode) nodes;
+  Vec(Token)   token_table;
 
   // the index of the root node
   size_t root_node;

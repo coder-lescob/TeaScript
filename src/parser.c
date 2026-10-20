@@ -14,6 +14,10 @@
 #include <stdbool.h>
 #include <errno.h>
 #include <math.h>
+#include <string.h>
+
+VEC_IMPL(AstNode)
+VEC_IMPL(Token)
 
 /**********************************************************************************************
  *                                      parser code                                           *
@@ -204,8 +208,8 @@ bool create_parser(struct Parser *parser) {
   }
   
   // init fields
-  parser->nodes       = vec_new(struct AstNode);
-  parser->token_table = vec_new(struct Token);
+  parser->nodes       = vec_new(AstNode);
+  parser->token_table = vec_new(Token);
   parser->done        = false;
   parser->root_node   = 0;
   parser->err         = false;
@@ -225,7 +229,7 @@ void free_parser(struct Parser *parser) {
   parser->root_node  = 0;
 
   // free all the nodes
-  vec_free(&parser->nodes);
+  vec_free(parser->nodes);
   
   // free all tokens
   if (parser->token_table.data != NULL) {
@@ -234,7 +238,7 @@ void free_parser(struct Parser *parser) {
     }
   }
 
-  vec_free(&parser->token_table);
+  vec_free(parser->token_table);
 }
 
 /**
@@ -253,7 +257,8 @@ void parser_done(struct Parser *parser) {
  * pushes a node to the parser's nodes
  */
 bool parser_push_node(struct Parser *parser, struct AstNode *node) {
-  return vec_push(&parser->nodes, (void *)node) == 0;
+  if (parser == NULL || node == NULL) return -1;
+  return VEC_METHOD(push,AstNode)(&parser->nodes, *node) == 0;
 }
 
 static NodeRef create_node(struct Parser *parser, struct AstNode *node) {
@@ -334,7 +339,7 @@ TokenID push_token(struct Parser *parser, struct Token *token) {
   size_t idx = parser->token_table.count;
   
   // push!
-  if (vec_push(&parser->token_table, token) != 0) {
+  if (VEC_METHOD(push,Token)(&parser->token_table, *token) != 0) {
     token_free(token);
     return SIZE_MAX;
   }
@@ -346,12 +351,7 @@ TokenID push_token(struct Parser *parser, struct Token *token) {
   return idx;
 }
 
-/**
- * displays a given ast node
- */
-void display_ast(struct Parser *parser, struct AstNode *node, int level) {
-  if (node == NULL || parser == NULL) return;
-
+static void display_level(int level) {
   for (int i = 1; i < level; i++) {
     printf("|  ");
   }
@@ -359,13 +359,28 @@ void display_ast(struct Parser *parser, struct AstNode *node, int level) {
   if (level > 0) {
     printf("|- ");
   }
+}
+
+/**
+ * displays a given ast node
+ */
+void display_ast(struct Parser *parser, struct AstNode *node, int level) {
+  if (node == NULL || parser == NULL) return;
+  
+  display_level(level);
 
   switch (node->type) {
     case NODE_ERR:
+      Token err;
+      if (VEC_METHOD(get_item, Token)(&parser->token_table, node->err.token, &err) != 0) {
+        printf("NODE_ERR( %s TOKEN ( unable to get token: %s ) )\n", get_err_str(node->err.type), strerror(errno));
+        break;
+      }
+
       printf("NODE_ERR( err = %s TOKEN( '%s', type = %s ) )\n", 
              get_err_str(node->err.type), 
-             ((struct Token *)parser->token_table.data + node->err.token)->word,
-             get_token_type_str(((struct Token *)parser->token_table.data + node->err.token)->type)
+             err.word,
+             get_token_type_str(err.type)
       );
       break;
     case NODE_IMM:
@@ -375,12 +390,43 @@ void display_ast(struct Parser *parser, struct AstNode *node, int level) {
       break;
     case NODE_BINARY_OP:
       printf("NODE_BINARY_OP ( op = %s )\n", get_bin_op(node->bin_op.op));
-      display_ast(parser, (struct AstNode *)parser->nodes.data + node->bin_op.A, level + 1);
-      display_ast(parser, (struct AstNode *)parser->nodes.data + node->bin_op.B, level + 1);
+
+      AstNode lhs, rhs;
+      if (VEC_METHOD(get_item, AstNode)(&parser->nodes, node->bin_op.A, &lhs) == 0) {
+        display_ast(parser, &lhs, level + 1);
+      }
+      else {
+        display_level(level + 1);
+        perror("Unable to get lhs node");
+      }
+
+      if (VEC_METHOD(get_item, AstNode)(&parser->nodes, node->bin_op.B, &rhs) == 0) {
+        display_ast(parser, &rhs, level + 1);
+      }
+      else {
+        display_level(level + 1);
+        perror("Unable to get rhs node");
+      }
+
       break;
     case NODE_LET_BINDING:
-      printf("NODE_LET_BINDING ( '%s' )\n", ((struct Token *)parser->token_table.data + node->let_binding.id)->word);
-      display_ast(parser, (struct AstNode *)parser->nodes.data + node->let_binding.expr, level + 1);
+
+      Token name;
+      if (VEC_METHOD(get_item, Token)(&parser->token_table, node->let_binding.id, &name) != 0) {
+        printf("NODE_LET_BINDING ( Unable to fetch token )\n");
+        break;
+      }
+
+      printf("NODE_LET_BINDING ( '%s' )\n", name.word);
+
+      AstNode expr;
+      if (VEC_METHOD(get_item,AstNode)(&parser->nodes, node->let_binding.expr, &expr) == 0) {
+        display_ast(parser, &expr, level + 1);
+      }
+      else {
+        display_level(level + 1);
+        perror("Unable to get expression");
+      }
       break;
     default:
       printf("UNKNOWN_NODE ( %d )\n", node->type);
