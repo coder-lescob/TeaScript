@@ -360,57 +360,49 @@ impl {
 
 #### Delegation
 
-Use `delegate Self::field_to_delegate;` to automatically say: "if there is not this function, try call this field for the same function".
+Use `delegate Self::field_to_delegate;` to automatically say: "if there is not this function, try call this field for the same function", but keep in mind that it is only syntactic sugar to write wrappers around these. You can also target one or more specific functions from the field. e.i.
+
+```TeaScript
+delegate Self::field {
+  // delegate update and init from the field
+  update, init,
+};
+```
 
 ### Enums
 
-There are two kinds of enum in TeaScript, enum and struct enum.
-
-#### Enum
-
-An enum is an enumeration. It's a shorthand to create a list constant. Fist index starts at but can be changed.
+In TeaScript enums are very similar to the one of rust since they are very useful. e.i.
 
 ```TeaScript
-enum {
-    A, // A == 0
-    B, // B == 1
-    /* ... */
-}
-```
-
-```TeaScript
-enum {
-    A = 10, // A == 10
-    B, // B == 11
-    /* ... */
-}
-```
-
-#### struct enum
-
-An enum struct carries data with. It's shorthand to create structures related together by some semantic meaning, like in rust.
-
-```TeaScript
-// example for fictional web server
-struct enum MyRequests {
-    Authenticate(String, String),
-    CreateAccount(String, String),
-    Logout(String),
-    /* ... */
+enum Language {
+    French,
+    English,
+    NotSupported(String), // the NotSupported variant takes a String parameter
 }
 ```
 
 ### Error handling
 
-In TeaScript there is no exception. Errors are first class values and are returned through the normal return flow of functions. Any type, even if locked, is either the locked/current type or an Err value. More precisly the type locking garentees what the successful type MUST be, tho it does no say anything about the Err type.
+In TeaScript there is no exception. Errors are first class values and are returned through the normal return flow of functions.
 
 ```TeaScript
-let x: Int = 10 / 0; // now x == Err<DivisionByZero>(10)
+let x: Int? = 10 / 0; // now x == Err<DivisionByZero>(10)
 ```
+
+Here the type Int? is essentially sugar for Int | Err.
 
 #### ?
 
-The `?` control flow says: "if there is an error make the current function return it otherwise just return the value". for example:
+The `?` control flow says: "if there is an error make the current function return it otherwise just return the value", but it has exactly the same behavior as:
+
+```TeaScript
+switch expr {
+    err if err is Err => return err,
+    ok => ok,
+}
+```
+
+But it makes code way more readable.
 
 ```TeaScript
 func not_cool() {
@@ -424,7 +416,7 @@ When the error propagates out of the main function the Error is shown.
 
 #### default
 
-The default operator provide a default value if its left side is an error.
+The default operator provide a default value if its left side is an error, as well as '?' it is can be achieved with a `switch` though it's more readable like so. 
 
 ```TeaScript
 let x = 10 / 0 default 0; // here 10 / 0 == Err<DivisionByZero>(10) thus default provide a default and x == 0
@@ -432,13 +424,23 @@ let x = 10 / 0 default 0; // here 10 / 0 == Err<DivisionByZero>(10) thus default
 
 examples of commun error
 
-#### pattern matching exhaustiveness
-
-When a branch is not matched, if it's a statement it does nothing and if it is an expression it returns `Err<NoBranchFor>(value)`.
-
 #### truthyness violation
 
-When there is a truthyness violation (aka `if 1 {}`), if the `if` is used as a statement then the current function returns `Err<TruthynessViolation>(1)` like if I had put a `?`, however when the if is used as an expression, the propagation shall be explicit and if there is no `?` the variable whose value is assigned the expression, the new value of the variable is `Err<TruthynessViolation>(1)`. Furthermore if the if is in an expression and that the condition isn't met, if no branch of the if has its condition met, and there is no `else` then it returns `Err<NoElse>()`.
+When there is a truthyness violation (aka `if 1 {}`), if it can be verified before running the code then it's rejected before running otherwise it's like there were a match inside of the if that only let pass if the type is Bool and makes the current function return the error otherwise. e.i.
+
+```TeaScript
+// this illustrate what happens if the interpreter cannot verify that the condition is a Bool before running.
+if switch cond {
+    cond if cond is Bool => cond,
+    not_bool => return Err<TruthynessViolation>(not_bool),
+} {
+    // blabla
+}
+```
+
+#### Missing else in expression
+
+In an expression a missing 'else' is a syntax error and it thus reject the code.
 
 #### Constant violation
 
@@ -446,15 +448,22 @@ If someone tries to modify a constant, the current function returns `Err<ConstVi
 
 #### Type violation
 
-If someone tries to assign or modify a value of a variable such that the locked type isn't the type of the expression and that the type isn't an error, the new value of the variable is therefore `Err<TypeViolation>("locked_var")`.
+If someone tries to assign or modify a value of a variable such that the locked type isn't the type of the expression either it can be verified before the code starts in that case it is rejected or it cannot be verified and in this case the current function returns the error, and yes it's almost like '?' but it looks more like:
+
+```TeaScript
+let var: Type = switch expr {
+    ok if ok is Type => ok,
+    type_violation => return Err<TypeViolation>(type_violation),
+};
+```
 
 #### Binding Violation
 
-If someone tries to modify the binding of an `static` variable, the current function return `Err<BindingViolation>("static_var")`.
+If someone tries to modify the binding of an `static` variable, the code is rejected by the interpreter even before it starts to run the code.
 
 #### Function call
 
-When a function does not exist it returns `Err<NotImplemented>("function_name")`, and if it has no meaningful way of storing that error the current function returns it.
+When a function does not exist, the program isn't even launched and the code is rejected.
 
 ```TeaScript
 func oopsy() {
@@ -463,10 +472,6 @@ func oopsy() {
 }
 ```
 
-#### Generally
-
-More generally if an error has a meaning to be somewhere then it is else it's returned by the current function.
-
 #### Composition
 
 When two an operation is tried on an error it creates a new error which stores the previous error inside. e.i.
@@ -474,6 +479,14 @@ When two an operation is tried on an error it creates a new error which stores t
 ```TeaScript
 let x = (10 / 0) + 3; // now x == Err<CannotAdd>(Err<DivisionByZero>(10), 3)
 ```
+
+#### pattern matching exhaustiveness
+
+When a branch is not matched, if it's a statement it does nothing and if it is an expression it returns `Err<NoBranchFor>(value)`, though it's worth noting that if the type doesn't include an error (aka Type?), then it will compose with a TypeViolation and become: Err<TypeViolation>(Err<NoBranchFor>(value)).
+
+#### In general
+
+As a rule of thumb, if an error cannot be avoided before the interpretation of the code, then the current function will return the error if the variable doesn't accept it.
 
 #### User defined errors
 
@@ -500,7 +513,7 @@ impl ErrDisplay for StringMustFinishWithS {
 }
 
 func main() {
-    let user_str = get_user_input(question: "Give a string ending in 's'");
+    let user_str = get_user_input(question: "Give a string ending in 's'")?;
 
     if !user_str.end_with('s') {
         return Err<StringMustFinishWithS>(user_str);
