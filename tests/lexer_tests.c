@@ -182,6 +182,7 @@ int test_lexer_consume_all_tokens(void)
       { "if",          TOKEN_IF },
       { "else",        TOKEN_ELSE },
       { "switch",      TOKEN_SWITCH },
+      { "b",           TOKEN_IDENTIFIER },
   };
     
   // get the number of tokens in the tests

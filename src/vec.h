@@ -10,18 +10,23 @@
   int VEC_METHOD(with_capacity, T)(Vec(T) *vec, size_t capacity);     \
   int VEC_METHOD(push, T)(Vec(T) *vec, T item);                       \
   int VEC_METHOD(pop, T)(Vec(T) *vec, T *out_item);                   \
-  int VEC_METHOD(get_item, T)(Vec(T) *vec, size_t idx, T *out_item);
-#define Vec(T) __Vec(T)
-#define __Vec(T) Vec_##T
+  int VEC_METHOD(get_item, T)(Vec(T) *vec, size_t idx, T *out_item);  \
+  int VEC_METHOD(set_item, T)(Vec(T) *vec, size_t idx, T item);
 
-#define VEC_METHOD(name, T) vec_##name##_##T
+#define Vec(T) __Vec(T)
+#define __Vec(T) __CONCAT(Vec_,T)
+#define GLUE(A, B) A##B
+#define CONCAT4(A, B, C, D) A ## B ## C ## D
+
+#define VEC_METHOD(name, T) CONCAT4(vec_,name, _, T)
 #define vec_new(T) (Vec(T)) { 0 } 
 
 #define vec_free(vec) \
   do {                \
-    free(vec.data);   \
-    vec.data = NULL;  \
-    vec.data     = 0; \
+    if (vec.data != NULL) { \
+      free(vec.data);   \
+      vec.data = NULL;  \
+    }                 \
     vec.count    = 0; \
     vec.capacity = 0; \
   } while (0)
@@ -83,6 +88,16 @@
                                                                       \
     *out_item = vec->data[idx];                                       \
     return 0;                                                         \
+  }                                                                   \
+                                                                      \
+  int VEC_METHOD(set_item, T)(Vec(T) *vec, size_t idx, T item) {      \
+    if (vec == NULL || idx >= vec->count) {                           \
+      errno = EINVAL;                                                 \
+      return -1;                                                      \
+    }                                                                 \
+                                                                      \
+    vec->data[idx] = item;                                            \
+    return 0;                                                         \
   }
 
-#endif _GENERIC_VEC_H
+#endif /* _GENERIC_VEC_H */

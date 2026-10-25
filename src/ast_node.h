@@ -9,6 +9,7 @@
 typedef size_t TokenID;
 typedef size_t IdentifierUID;
 typedef size_t NodeRef;
+typedef size_t ScopeRef;
 
 enum AstNodeType {
   NODE_ERR,
@@ -17,6 +18,7 @@ enum AstNodeType {
   NODE_LET_BINDING,
   NODE_CONST_BINDING,
   NODE_STATIC_BINDING,
+  NODE_SCOPE,
 };
 
 enum ErrorType {
@@ -27,6 +29,7 @@ enum ErrorType {
   ERR_EXPECTED_IDENTIFIER,
   ERR_EXPECTED_EQ_ASSIGN,
   ERR_EXPECTED_SEMI_COLON,
+  ERR_EXPECTED_STATEMENT,
 };
 
 struct ErrNode {
@@ -66,8 +69,7 @@ struct StaticBindingNode {
 };
 
 struct ScopeNode {
-  NodeRef *refs;
-  size_t refc;
+  ScopeRef scope;
 };
 
 struct AstNode {

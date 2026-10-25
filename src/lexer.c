@@ -108,10 +108,10 @@ static bool is_identifier(char *buf, int buf_len) {
 }
 
 static bool is_int_literal(char *buf, int buf_len) {
-  if (buf_len == 0) return false;
+  if (buf == NULL || buf_len == 0 || *buf == 0) return false;
 
   for (;*buf != 0; buf++) {
-    if (!isdigit(*buf)) {
+    if (*buf < '0' || *buf > '9') {
       return false;
     }
   }
@@ -227,7 +227,7 @@ int classify_token(char *buf, int buf_len) {
   if (buf_len == 0) return TOKEN_ILLEGAL;
 
   #define KEYWORD_TOKEN(word, token_type) \
-   if (strncmp(buf, word, buf_len) == 0) return token_type;
+   if (buf_len == strlen(word) && strncmp(buf, word, buf_len) == 0) return token_type;
 
   // keywords tokens
   KEYWORD_TOKEN("let",    TOKEN_LET);

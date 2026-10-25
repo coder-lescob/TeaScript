@@ -29,6 +29,7 @@ char *get_err_str(enum ErrorType err) {
     case ERR_EXPECTED_IDENTIFIER:      return "ERR_EXPECTED_IDENTIFIER";
     case ERR_EXPECTED_EQ_ASSIGN:       return "ERR_EXPECTED_EQ_ASSIGN";
     case ERR_EXPECTED_SEMI_COLON:      return "ERR_EXPECTED_SEMI_COLON";
+    case ERR_EXPECTED_STATEMENT:       return "ERR_EXPECTED_STATEMENT";
     default: return NULL;
   }
 }

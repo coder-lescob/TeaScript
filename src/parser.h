@@ -25,6 +25,8 @@ typedef struct Token   Token;
 
 VEC_DECL(AstNode)
 VEC_DECL(Token)
+VEC_DECL(NodeRef)
+VEC_DECL(Vec(NodeRef))
 
 typedef struct {
   float lhs, rhs;
@@ -35,6 +37,7 @@ struct Parser {
   // I used vectors to store the nodes and the token useful to parsing
   Vec(AstNode) nodes;
   Vec(Token)   token_table;
+  Vec(Vec(NodeRef)) scopes_table; // all the nodes belonging to scopes 
 
   // the index of the root node
   size_t root_node;
@@ -54,6 +57,11 @@ struct Parser {
  * uses the syntax of teascript to parse a lexer
  */
 struct Parser parse_lexer(struct Lexer *lexer);
+
+/**
+ * parses a scope
+ */
+NodeRef parse_scope(struct Parser *parser, struct Lexer *lexer);
 
 /**
  * parses a binding
@@ -131,6 +139,22 @@ NodeRef create_binary_op_node(struct Parser *parser, struct BinOpNode op);
  * NOTE: SIZE_MAX is used as an error sentinel
  */
 NodeRef create_let_binding_node(struct Parser *parser, struct LetBindingNode let);
+
+/**
+ * get the scope index of now.
+ */
+ScopeRef create_scope(struct Parser *parser);
+
+/**
+ * adds a node to the scopes_table
+ */
+int push_to_scope(struct Parser *parser, struct ScopeNode *node, NodeRef ref);
+
+/**
+ * creates a scope node
+ * NOTE: SIZE_MAX is used as an error sentinel
+ */
+NodeRef create_scope_node(struct Parser *parser, struct ScopeNode scope);
 
 /**
  * pushes a token to the token table and return it's index

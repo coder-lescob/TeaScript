@@ -18,6 +18,8 @@
 
 VEC_IMPL(AstNode)
 VEC_IMPL(Token)
+VEC_IMPL(NodeRef)
+VEC_IMPL(Vec(NodeRef))
 
 /**********************************************************************************************
  *                                      parser code                                           *
@@ -32,11 +34,55 @@ struct Parser parse_lexer(struct Lexer *lexer) {
   create_parser(&parser);
   
   // parse as an expression
-  parser.root_node = parse_let_binding(&parser, lexer);
+  parser.root_node = parse_scope(&parser, lexer);
   
   // mark as done
   parser_done(&parser);
   return parser;
+}
+
+/**
+ * parses a scope
+ */
+NodeRef parse_scope(struct Parser *parser, struct Lexer *lexer) {
+  if (parser == NULL || lexer == NULL) return SIZE_MAX;
+  
+  NodeRef statement;
+  struct ScopeNode scope = { .scope = create_scope(parser) };
+
+  while (1) {
+    // get the token to choose what to call
+    struct Token token = lexer_peek_token(lexer);
+    
+    if (token.type == TOKEN_EOF) {
+      break;
+    }
+    else if (token.word == NULL) {
+      // do something...
+      continue;
+    }
+    else if (strcmp(token.word, "let") == 0) {
+      statement = parse_let_binding(parser, lexer);
+    }
+    else if (strcmp(token.word, "{") == 0) {
+      lexer_ignore_token(lexer);
+      statement = parse_scope(parser, lexer);
+    }
+    else if (strcmp(token.word, "}") == 0) {
+      token_free(&token);
+      lexer_ignore_token(lexer);
+      break;
+    }
+    else {
+      TokenID tok = push_token(parser, &token);
+      return create_syntax_error(parser, (struct ErrNode) { .type = ERR_EXPECTED_STATEMENT, .token = tok });
+    }
+
+    token_free(&token);
+    push_to_scope(parser, &scope, statement);
+  }
+
+  return create_scope_node(parser, scope);
 }
 
 /**
@@ -210,6 +256,7 @@ bool create_parser(struct Parser *parser) {
   // init fields
   parser->nodes       = vec_new(AstNode);
   parser->token_table = vec_new(Token);
+  parser->scopes_table= vec_new(Vec(NodeRef));
   parser->done        = false;
   parser->root_node   = 0;
   parser->err         = false;
@@ -239,6 +286,14 @@ void free_parser(struct Parser *parser) {
   }
 
   vec_free(parser->token_table);
+  
+  if (parser->scopes_table.data != NULL) {
+    for (size_t i = 0; i < parser->scopes_table.count; i++) {
+      vec_free(parser->scopes_table.data[i]);
+    }
+  }
+
+  vec_free(parser->scopes_table);
 }
 
 /**
@@ -314,6 +369,47 @@ NodeRef create_binary_op_node(struct Parser *parser, struct BinOpNode op) {
  */
 NodeRef create_let_binding_node(struct Parser *parser, struct LetBindingNode let) {
   struct AstNode node = { .type = NODE_LET_BINDING, .let_binding = let };
+  return create_node(parser, &node);
+}
+
+/**
+ * get the scope index of now.
+ */
+ScopeRef create_scope(struct Parser *parser) {
+  ScopeRef ref = parser->scopes_table.count;
+  
+  if (VEC_METHOD(push,Vec(NodeRef))(&parser->scopes_table, vec_new(NodeRef)) != 0) {
+    return SIZE_MAX;
+  }
+
+  return ref;
+}
+
+/**
+ * adds a node to the scopes_table
+ */
+int push_to_scope(struct Parser *parser, struct ScopeNode *node, NodeRef ref) {
+  
+  // get a copy of the scope_node
+  // NOTE: here we don't own the scope and it's why we don't free it
+  Vec(NodeRef) node_scope;
+  if (VEC_METHOD(get_item,Vec(NodeRef))(&parser->scopes_table, node->scope, &node_scope) != 0) {
+    return -1;
+  }
+
+  if (VEC_METHOD(push,NodeRef)(&node_scope, ref) != 0) {
+    return -1;
+  }
+
+  return VEC_METHOD(set_item,Vec(NodeRef))(&parser->scopes_table, node->scope, node_scope);
+}
+
+/**
+ * creates a scope node
+ * NOTE: SIZE_MAX is used as an error sentinel
+ */
+NodeRef create_scope_node(struct Parser *parser, struct ScopeNode scope) {
+  struct AstNode node = { .type = NODE_SCOPE, .scope = scope };
   return create_node(parser, &node);
 }
 
@@ -426,6 +522,29 @@ void display_ast(struct Parser *parser, struct AstNode *node, int level) {
       else {
         display_level(level + 1);
         perror("Unable to get expression");
+      }
+      break;
+    case NODE_SCOPE:
+      printf("NODE_SCOPE\n");
+      
+      Vec(NodeRef) scope;
+      if (VEC_METHOD(get_item,Vec(NodeRef))(&parser->scopes_table, node->scope.scope, &scope) != 0) {
+        display_level(level + 1);
+        perror("Unable to get scope");
+        break;
+      }
+
+      NodeRef ref;
+      struct AstNode child_node;
+      for (size_t i = 0; i < scope.count; i++) {
+        if (VEC_METHOD(get_item,NodeRef)(&scope, i, &ref) == 0
+         && VEC_METHOD(get_item,AstNode)(&parser->nodes, ref, &child_node) == 0) {
+          display_ast(parser, &child_node, level + 1);
+        }
+        else {
+          display_level(level + 1);
+          perror("Failed to get node inside of scope");
+        }
       }
       break;
     default:
