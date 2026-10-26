@@ -26,15 +26,15 @@ void print_value(struct Value *value) {
 
   switch (value->type) {
     case VALUE_INT:
-      printf("VALUE( %ld )", value->int_value);
+      printf("Value::Int( %ld )", value->int_value);
       break;
 
     case VALUE_FLOAT:
-      printf("VALUE( %f )", value->float_value);
+      printf("Value::Float( %f )", value->float_value);
       break;
 
     case VALUE_CHR:
-      printf("VALUE( '%c' )", value->chr_value);
+      printf("Value::Char( '%c' )", value->chr_value);
       break;
 
     /**

@@ -51,31 +51,30 @@ NodeRef parse_scope(struct Parser *parser, struct Lexer *lexer) {
   struct ScopeNode scope = { .scope = create_scope(parser) };
 
   while (1) {
+    // reset the statement
+    statement = SIZE_MAX;
+
     // get the token to choose what to call
     struct Token token = lexer_peek_token(lexer);
     
     if (token.type == TOKEN_EOF) {
       break;
     }
-    else if (token.word == NULL) {
-      // do something...
-      continue;
-    }
-    else if (strcmp(token.word, "let") == 0) {
+    else if (token.type == TOKEN_LET) {
       statement = parse_let_binding(parser, lexer);
     }
-    else if (strcmp(token.word, "{") == 0) {
+    else if (token.type == TOKEN_LCURLY) {
       lexer_ignore_token(lexer);
       statement = parse_scope(parser, lexer);
     }
-    else if (strcmp(token.word, "}") == 0) {
+    else if (token.type == TOKEN_RCURLY) {
       token_free(&token);
       lexer_ignore_token(lexer);
       break;
     }
     else {
       TokenID tok = push_token(parser, &token);
-      return create_syntax_error(parser, (struct ErrNode) { .type = ERR_EXPECTED_STATEMENT, .token = tok });
+      statement = create_syntax_error(parser, (struct ErrNode) { .type = ERR_EXPECTED_STATEMENT, .token = tok });
     }
 
     token_free(&token);
@@ -449,11 +448,11 @@ TokenID push_token(struct Parser *parser, struct Token *token) {
 
 static void display_level(int level) {
   for (int i = 1; i < level; i++) {
-    printf("|  ");
+    printf("│  ");
   }
 
   if (level > 0) {
-    printf("|- ");
+    printf("├─ ");
   }
 }
 
@@ -469,26 +468,26 @@ void display_ast(struct Parser *parser, struct AstNode *node, int level) {
     case NODE_ERR:
       Token err;
       if (VEC_METHOD(get_item, Token)(&parser->token_table, node->err.token, &err) != 0) {
-        printf("NODE_ERR( %s TOKEN ( unable to get token: %s ) )\n", get_err_str(node->err.type), strerror(errno));
+        printf("Node::Err( %s TOKEN ( unable to get token: %s ) )\n", get_err_str(node->err.type), strerror(errno));
         break;
       }
 
-      printf("NODE_ERR( err = %s TOKEN( '%s', type = %s ) )\n", 
+      printf("Node::Err( err = %s TOKEN( '%s', type = %s ) )\n", 
              get_err_str(node->err.type), 
              err.word,
              get_token_type_str(err.type)
       );
       break;
     case NODE_IMM:
-      printf("NODE_IMM( ");
+      printf("Node::Imm( ");
       print_value(&node->imm.imm);
       printf(" )\n");
       break;
     case NODE_BINARY_OP:
-      printf("NODE_BINARY_OP ( op = %s )\n", get_bin_op(node->bin_op.op));
+      printf("Node::BinOp ( op: %s )\n", get_bin_op(node->bin_op.op));
 
       AstNode lhs, rhs;
-      if (VEC_METHOD(get_item, AstNode)(&parser->nodes, node->bin_op.A, &lhs) == 0) {
+      if (node->bin_op.A != SIZE_MAX && VEC_METHOD(get_item, AstNode)(&parser->nodes, node->bin_op.A, &lhs) == 0) {
         display_ast(parser, &lhs, level + 1);
       }
       else {
@@ -496,7 +495,7 @@ void display_ast(struct Parser *parser, struct AstNode *node, int level) {
         perror("Unable to get lhs node");
       }
 
-      if (VEC_METHOD(get_item, AstNode)(&parser->nodes, node->bin_op.B, &rhs) == 0) {
+      if (node->bin_op.B != SIZE_MAX && VEC_METHOD(get_item, AstNode)(&parser->nodes, node->bin_op.B, &rhs) == 0) {
         display_ast(parser, &rhs, level + 1);
       }
       else {
@@ -508,15 +507,15 @@ void display_ast(struct Parser *parser, struct AstNode *node, int level) {
     case NODE_LET_BINDING:
 
       Token name;
-      if (VEC_METHOD(get_item, Token)(&parser->token_table, node->let_binding.id, &name) != 0) {
-        printf("NODE_LET_BINDING ( Unable to fetch token )\n");
+      if (node->let_binding.id != SIZE_MAX && VEC_METHOD(get_item, Token)(&parser->token_table, node->let_binding.id, &name) != 0) {
+        printf("Node::LetBinding ( Unable to fetch varable name )\n");
         break;
       }
 
-      printf("NODE_LET_BINDING ( '%s' )\n", name.word);
+      printf("Node::LetBinding ( var_name: '%s' )\n", name.word);
 
       AstNode expr;
-      if (VEC_METHOD(get_item,AstNode)(&parser->nodes, node->let_binding.expr, &expr) == 0) {
+      if (node->let_binding.expr != SIZE_MAX && VEC_METHOD(get_item,AstNode)(&parser->nodes, node->let_binding.expr, &expr) == 0) {
         display_ast(parser, &expr, level + 1);
       }
       else {
@@ -525,10 +524,10 @@ void display_ast(struct Parser *parser, struct AstNode *node, int level) {
       }
       break;
     case NODE_SCOPE:
-      printf("NODE_SCOPE\n");
+      printf("Node::Scope\n");
       
       Vec(NodeRef) scope;
-      if (VEC_METHOD(get_item,Vec(NodeRef))(&parser->scopes_table, node->scope.scope, &scope) != 0) {
+      if (node->scope.scope != SIZE_MAX && VEC_METHOD(get_item,Vec(NodeRef))(&parser->scopes_table, node->scope.scope, &scope) != 0) {
         display_level(level + 1);
         perror("Unable to get scope");
         break;
@@ -537,7 +536,7 @@ void display_ast(struct Parser *parser, struct AstNode *node, int level) {
       NodeRef ref;
       struct AstNode child_node;
       for (size_t i = 0; i < scope.count; i++) {
-        if (VEC_METHOD(get_item,NodeRef)(&scope, i, &ref) == 0
+        if (VEC_METHOD(get_item,NodeRef)(&scope, i, &ref) == 0 && ref != SIZE_MAX
          && VEC_METHOD(get_item,AstNode)(&parser->nodes, ref, &child_node) == 0) {
           display_ast(parser, &child_node, level + 1);
         }
@@ -548,7 +547,7 @@ void display_ast(struct Parser *parser, struct AstNode *node, int level) {
       }
       break;
     default:
-      printf("UNKNOWN_NODE ( %d )\n", node->type);
+      printf("Node::Unknown ( %d )\n", node->type);
       break;
   }
 }

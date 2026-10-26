@@ -9,10 +9,10 @@
  */
 char *get_bin_op(enum BinOp op) {
   switch (op) {
-    case OP_ADD: return "OP_ADD";
-    case OP_SUB: return "OP_SUB";
-    case OP_MUL: return "OP_MUL";
-    case OP_DIV: return "OP_DIV";
+    case OP_ADD: return "+";
+    case OP_SUB: return "-";
+    case OP_MUL: return "*";
+    case OP_DIV: return "/";
   }
   return NULL;
 }
