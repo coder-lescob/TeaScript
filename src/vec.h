@@ -13,12 +13,14 @@
   int VEC_METHOD(get_item, T)(Vec(T) *vec, size_t idx, T *out_item);  \
   int VEC_METHOD(set_item, T)(Vec(T) *vec, size_t idx, T item);
 
-#define Vec(T) __Vec(T)
-#define __Vec(T) __CONCAT(Vec_,T)
-#define GLUE(A, B) A##B
-#define CONCAT4(A, B, C, D) A ## B ## C ## D
+#ifndef __CONCAT
+#define __CONCAT(A, B) A##B
+#endif
 
-#define VEC_METHOD(name, T) CONCAT4(vec_,name, _, T)
+#define Vec(T) __CONCAT(Vec_,T)
+#define __CONCAT4(A, B, C, D) A ## B ## C ## D
+
+#define VEC_METHOD(name, T) __CONCAT4(vec_,name, _, T)
 #define vec_new(T) (Vec(T)) { 0 } 
 
 #define vec_free(vec) \
