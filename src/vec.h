@@ -33,10 +33,11 @@
 
 #define VEC_IMPL(T) \
   int VEC_METHOD(with_capacity, T)(Vec(T) *vec, size_t capacity) {    \
-    if (vec == NULL || capacity <= vec->capacity) {             \
+    if (vec == NULL || capacity < vec->capacity) {              \
       errno = EINVAL;                                           \
       return -1;                                                \
     }                                                           \
+    if (capacity == vec->capacity) return 0;                    \
                                                                 \
     /* reallocate it! */                                        \
     T* new_region = realloc(vec->data, capacity * sizeof(T));   \
