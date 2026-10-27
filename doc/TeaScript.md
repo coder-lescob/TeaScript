@@ -522,3 +522,94 @@ func main() {
     println($"success {user_str}, finishes with an 's'");
 }
 ```
+
+### The C FFI
+
+For anyone that wouldn't know, an FFI stands for a Foreign Function Interface, everything is in the name it permits to call foreign functions. In TeaScript that's especially true for C, since the interpreter is written in C, we can easily expose a C api which can be used to call C from TeaScript and vice-versa. The C module can be included once compiled in a dynamic or static library using:
+
+```TeaScript
+extern use "lib.so";
+```
+
+Or simply before compilation using:
+
+```TeaScript
+extern use "module.c";
+```
+
+It's worth noting that the C side must declare that it is part of a new module and should declare all it's functions and structs. Such that the TeaScript side experiences no binding generation and most of the boilerplate wrappers and declarations that comes with that.
+
+#### example
+
+Say we want to create an Hello module which prints 5_000*n hello to a file, n being a number chosen by the user. The user could be mad enough to want to print 5 millions hello to a file which would be slow in TeaScript thankfully C comes to the rescue.
+
+```C
+#include <stdio.h>
+#include <stdint.h>
+#include <errno.h>
+#include <TeaScriptApi.h>
+
+void print_5000n_hello_to_file(struct TeaRuntime *runtime) {
+    // get the arguments since they belong to the runtime no need for free
+    struct Vars *args = get_args(runtime, 2); // expects 2 arguments
+
+    // first expected is the file, of type locked string, use -1 in place of the uid to signify not locked 
+    struct Value value = get_value_for_arg(runtime, &args[0], get_type_uid(runtime, "String"));
+
+    // once again the string given belongs to the runtime and there are no need to free it.
+    char *path = String_to_Cstring(runtime, &value);
+
+    // second argument is n the integer
+    // the UID of Int is known at compile time thus we can use the macro
+    struct value value = get_value_for_arg(runtime, &args[1], TYPE_INT_UID);
+
+    // we know it's an int thus we can extract it
+    int64_t n = value.int_value;
+
+    // open the file
+    FILE *fp = fopen(path, "w");
+
+    if (fp == NULL) {
+        // handle error
+        return_value(runtime, build_error_from(runtime, errno));
+        return;
+    }
+
+    // do the functionnality
+    for (int i = 0; i < 5000 * n; i++) {
+        fprintf(fp, "hello\n");
+    }
+
+    fclose(fp);
+}
+
+// the mod function is ran when the library is loaded
+void mod(struct TeaRuntime *runtime) {
+    // first declare the module
+    ModID module = declare_foreign_module(runtime, "HelloModule");
+
+    // then declare the function without it's signature which means signature discovered at runtime
+    FuncID hello_func = declare_foreign_function_no_sig(runtime, module, "print_5000n_hello_to_file", print_5000n_hello_to_file);
+}
+
+```
+
+Then we can compile this as the hello.so library and go to the TeaScript side:
+
+```TeaScript
+extern use "hello.so";
+use std;
+
+func main() {
+    println("You will gonna be able to write 5000 * n "hello" in a file of you choice");
+
+    // get path and n
+    let path = ask("which file?");
+    let n    = ask("n =").parse<Int>()?;
+
+    // call C
+    print_5000n_hello_to_file(path, n);
+}
+```
+
+and here we go now you can write 5000 * n "hello" in a file, I'm not convinced of the usefulness of this tool but it's now faster thanks to C!
