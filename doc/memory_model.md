@@ -49,4 +49,4 @@ Yes a stack for this is actually an oversimplification, but an arena allocator c
 
 ## What about values that vary over time in length?
 
-Well it's time to tell you the truth, the interpreter has no real support for that. In fact that's because it supports C through ffi which can easily implement that for us. In fact it abuses the api given by the interpreter to make an allocator that is then used for the Array struct.
+Well it's time to tell you the truth, the interpreter has no real support for that. In fact that's because it supports C through ffi which can easily implement that for us. In fact it abuses the api of the arena storage given by the interpreter to make an allocator that is then used for the Array struct.
