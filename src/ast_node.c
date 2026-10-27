@@ -33,3 +33,15 @@ char *get_err_str(enum ErrorType err) {
     default: return NULL;
   }
 }
+
+/**
+ * get the binding kind as a string
+ */
+char *get_binding_str(enum BindingKind bind) {
+  switch (bind) {
+    case BINDING_LET: return "Binding::Let";
+    case BINDING_CONST: return "Binding::Const";
+    case BINDING_STATIC: return "Binding::Static";
+    default: return NULL;
+  }
+}

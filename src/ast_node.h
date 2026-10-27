@@ -14,10 +14,9 @@ typedef size_t ScopeRef;
 enum AstNodeType {
   NODE_ERR,
   NODE_IMM,
+  NODE_IDENTIFIER,
   NODE_BINARY_OP,
-  NODE_LET_BINDING,
-  NODE_CONST_BINDING,
-  NODE_STATIC_BINDING,
+  NODE_BINDING,
   NODE_SCOPE,
 };
 
@@ -41,6 +40,10 @@ struct ImmNode {
   struct Value imm;
 };
 
+struct IdentifierNode {
+  TokenID token;
+};
+
 enum BinOp {
   OP_ADD,
   OP_SUB,
@@ -53,19 +56,16 @@ struct BinOpNode {
   NodeRef A, B;
 };
 
-struct LetBindingNode {
+enum BindingKind {
+  BINDING_LET,
+  BINDING_CONST,
+  BINDING_STATIC,
+};
+
+struct BindingNode {
+  enum BindingKind kind;
   TokenID id;
   NodeRef expr; 
-};
-
-struct ConstBindingNode {
-  IdentifierUID id;
-  NodeRef expr;
-};
-
-struct StaticBindingNode {
-  IdentifierUID id;
-  NodeRef expr;
 };
 
 struct ScopeNode {
@@ -77,10 +77,9 @@ struct AstNode {
   union {
     struct ErrNode err;
     struct ImmNode imm;
+    struct IdentifierNode identifier;
     struct BinOpNode bin_op;
-    struct LetBindingNode let_binding;
-    struct ConstBindingNode const_binding;
-    struct StaticBindingNode static_binding;
+    struct BindingNode binding;
     struct ScopeNode scope;
   };
 };
@@ -94,5 +93,10 @@ char *get_bin_op(enum BinOp op);
  * get the string representation of an error
  */
 char *get_err_str(enum ErrorType err);
+
+/**
+ * get the binding kind as a string
+ */
+char *get_binding_str(enum BindingKind bind);
 
 #endif

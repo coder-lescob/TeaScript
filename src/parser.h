@@ -66,7 +66,7 @@ NodeRef parse_scope(struct Parser *parser, struct Lexer *lexer);
 /**
  * parses a binding
  */
-NodeRef parse_let_binding(struct Parser *parser, struct Lexer *lexer);
+NodeRef parse_binding(struct Parser *parser, struct Lexer *lexer);
 
 /**
  * parses the operand to an expression.
@@ -129,16 +129,22 @@ NodeRef create_syntax_error(struct Parser *parser, struct ErrNode err);
 NodeRef create_node_imm(struct Parser *parser, struct ImmNode imm);
 
 /**
+ * creates a identifier node
+ * NOTE: SIZE_MAX is used as an error sentinel
+ */
+NodeRef create_node_id(struct Parser *parser, struct IdentifierNode id);
+
+/**
  * creates a binary operation node
  * NOTE: SIZE_MAX is used as an error sentinel
  */
 NodeRef create_binary_op_node(struct Parser *parser, struct BinOpNode op);
 
 /**
- * creates a let binding node
+ * creates a binding node
  * NOTE: SIZE_MAX is used as an error sentinel
  */
-NodeRef create_let_binding_node(struct Parser *parser, struct LetBindingNode let);
+NodeRef create_binding_node(struct Parser *parser, struct BindingNode bind);
 
 /**
  * get the scope index of now.

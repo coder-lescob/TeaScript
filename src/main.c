@@ -26,13 +26,11 @@ int main(int argc, char **argv) {
   struct Lexer lexer = CREATE_LEXER(code);
   struct Parser parser = parse_lexer(&lexer);
 
-  if (!parser.err) {
-    display_ast(&parser, (struct AstNode *)parser.nodes.data + parser.root_node, 0);
-  }
-  else {
-    
+  display_ast(&parser, (struct AstNode *)parser.nodes.data + parser.root_node, 0);
+  
+  if (parser.err) {
     // syntax Errors occured
-    printf("Errors:\n");
+    printf("\nErrors:\n");
 
     // check for any node if it is an error node
     for (size_t i = 0; i < parser.nodes.count; i++) {

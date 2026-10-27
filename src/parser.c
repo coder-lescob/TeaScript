@@ -60,8 +60,8 @@ NodeRef parse_scope(struct Parser *parser, struct Lexer *lexer) {
     if (token.type == TOKEN_EOF) {
       break;
     }
-    else if (token.type == TOKEN_LET) {
-      statement = parse_let_binding(parser, lexer);
+    else if (token.type == TOKEN_LET || token.type == TOKEN_CONST || token.type == TOKEN_STATIC) {
+      statement = parse_binding(parser, lexer);
     }
     else if (token.type == TOKEN_LCURLY) {
       lexer_ignore_token(lexer);
@@ -75,27 +75,42 @@ NodeRef parse_scope(struct Parser *parser, struct Lexer *lexer) {
     else {
       TokenID tok = push_token(parser, &token);
       statement = create_syntax_error(parser, (struct ErrNode) { .type = ERR_EXPECTED_STATEMENT, .token = tok });
+      push_to_scope(parser, &scope, statement);
+      goto err;
     }
 
     token_free(&token);
     push_to_scope(parser, &scope, statement);
   }
 
+err:
   return create_scope_node(parser, scope);
+}
+
+static enum BindingKind get_binding_kind(enum TokenType type) {
+  switch (type) {
+    case TOKEN_LET: return BINDING_LET;
+    case TOKEN_CONST: return BINDING_CONST;
+    case TOKEN_STATIC: return BINDING_STATIC;
+    default: 
+      fprintf(stderr, "Cannot create binding from token %s\n", get_token_type_str(type));
+      abort();
+  }
 }
 
 /**
  * parses a binding
  */
-NodeRef parse_let_binding(struct Parser *parser, struct Lexer *lexer) {
+NodeRef parse_binding(struct Parser *parser, struct Lexer *lexer) {
   if (parser == NULL || lexer == NULL) return SIZE_MAX;
   
   // consume the token
   struct Token token = lexer_consume_token(lexer);
-  if (token.type != TOKEN_LET) {
+  if (token.type != TOKEN_LET && token.type != TOKEN_CONST && token.type != TOKEN_STATIC) {
     TokenID tok = push_token(parser, &token);
     return create_syntax_error(parser, (struct ErrNode) { ERR_EXPECTED_BINDING, tok } );
   }
+  enum BindingKind bindingkind = get_binding_kind(token.type);
   token_free(&token);
   
   // get the var name
@@ -124,7 +139,7 @@ NodeRef parse_let_binding(struct Parser *parser, struct Lexer *lexer) {
   }
   token_free(&semi_colon);
 
-  return create_let_binding_node(parser, (struct LetBindingNode) { nameID, expr } );
+  return create_binding_node(parser, (struct BindingNode) { bindingkind, nameID, expr } );
 }
 
 /**
@@ -165,6 +180,9 @@ NodeRef parse_operand(struct Parser *parser, struct Lexer *lexer) {
     
       // create an immediate node
       return create_node_imm(parser, (struct ImmNode) { value } );
+    case TOKEN_IDENTIFIER:
+      TokenID id = push_token(parser, &token);
+      return create_node_id(parser, (struct IdentifierNode) { id });
     // oopsy
     default:
       TokenID tok = push_token(parser, &token);
@@ -353,6 +371,15 @@ NodeRef create_node_imm(struct Parser *parser, struct ImmNode imm) {
 }
 
 /**
+ * creates a identifier node
+ * NOTE: SIZE_MAX is used as an error sentinel
+ */
+NodeRef create_node_id(struct Parser *parser, struct IdentifierNode id) {
+  struct AstNode node = (struct AstNode) { .type = NODE_IDENTIFIER, .identifier = id };
+  return create_node(parser, &node);
+}
+
+/**
  * creates a binary operation node
  * NOTE: SIZE_MAX is used as an error sentinel
  */
@@ -363,11 +390,11 @@ NodeRef create_binary_op_node(struct Parser *parser, struct BinOpNode op) {
 }
 
 /**
- * creates a let binding node
+ * creates a binding node
  * NOTE: SIZE_MAX is used as an error sentinel
  */
-NodeRef create_let_binding_node(struct Parser *parser, struct LetBindingNode let) {
-  struct AstNode node = { .type = NODE_LET_BINDING, .let_binding = let };
+NodeRef create_binding_node(struct Parser *parser, struct BindingNode bind) {
+  struct AstNode node = { .type = NODE_BINDING, .binding = bind };
   return create_node(parser, &node);
 }
 
@@ -483,6 +510,15 @@ void display_ast(struct Parser *parser, struct AstNode *node, int level) {
       print_value(&node->imm.imm);
       printf(" )\n");
       break;
+    case NODE_IDENTIFIER:
+      struct Token id;
+      if (VEC_METHOD(get_item, Token)(&parser->token_table, node->identifier.token, &id) != 0) {
+        printf("Node::Identifier ( Unable to get token )");
+        break;
+      }
+
+      printf("Node::Identifier ( %s )\n", id.word);
+      break;
     case NODE_BINARY_OP:
       printf("Node::BinOp ( op: %s )\n", get_bin_op(node->bin_op.op));
 
@@ -504,18 +540,18 @@ void display_ast(struct Parser *parser, struct AstNode *node, int level) {
       }
 
       break;
-    case NODE_LET_BINDING:
+    case NODE_BINDING:
 
       Token name;
-      if (node->let_binding.id != SIZE_MAX && VEC_METHOD(get_item, Token)(&parser->token_table, node->let_binding.id, &name) != 0) {
-        printf("Node::LetBinding ( Unable to fetch varable name )\n");
+      if (node->binding.id != SIZE_MAX && VEC_METHOD(get_item, Token)(&parser->token_table, node->binding.id, &name) != 0) {
+        printf("Node::%s ( Unable to fetch variable name )\n", get_binding_str(node->binding.kind));
         break;
       }
 
-      printf("Node::LetBinding ( var_name: '%s' )\n", name.word);
+      printf("Node::%s ( var_name: '%s' )\n", get_binding_str(node->binding.kind), name.word);
 
       AstNode expr;
-      if (node->let_binding.expr != SIZE_MAX && VEC_METHOD(get_item,AstNode)(&parser->nodes, node->let_binding.expr, &expr) == 0) {
+      if (node->binding.expr != SIZE_MAX && VEC_METHOD(get_item,AstNode)(&parser->nodes, node->binding.expr, &expr) == 0) {
         display_ast(parser, &expr, level + 1);
       }
       else {
