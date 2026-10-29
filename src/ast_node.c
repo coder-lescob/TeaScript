@@ -13,6 +13,7 @@ char *get_bin_op(enum BinOp op) {
     case OP_SUB: return "-";
     case OP_MUL: return "*";
     case OP_DIV: return "/";
+    case OP_EQ:  return "==";
   }
   return NULL;
 }
@@ -30,6 +31,8 @@ char *get_err_str(enum ErrorType err) {
     case ERR_EXPECTED_EQ_ASSIGN:       return "ERR_EXPECTED_EQ_ASSIGN";
     case ERR_EXPECTED_SEMI_COLON:      return "ERR_EXPECTED_SEMI_COLON";
     case ERR_EXPECTED_STATEMENT:       return "ERR_EXPECTED_STATEMENT";
+    case ERR_EXPECTED_LCURLY:          return "ERR_EXPECTED_LCURLY";
+    case ERR_EXPECTED_RCURLY:          return "ERR_EXPECTED_RCURLY";
     default: return NULL;
   }
 }

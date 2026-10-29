@@ -18,6 +18,7 @@ enum AstNodeType {
   NODE_BINARY_OP,
   NODE_BINDING,
   NODE_SCOPE,
+  NODE_IF,
 };
 
 enum ErrorType {
@@ -29,6 +30,9 @@ enum ErrorType {
   ERR_EXPECTED_EQ_ASSIGN,
   ERR_EXPECTED_SEMI_COLON,
   ERR_EXPECTED_STATEMENT,
+  ERR_EXPECTED_IF,
+  ERR_EXPECTED_LCURLY,
+  ERR_EXPECTED_RCURLY,
 };
 
 struct ErrNode {
@@ -49,6 +53,7 @@ enum BinOp {
   OP_SUB,
   OP_MUL,
   OP_DIV,
+  OP_EQ,
 };
 
 struct BinOpNode {
@@ -72,6 +77,14 @@ struct ScopeNode {
   ScopeRef scope;
 };
 
+struct IfStatementNode {
+  NodeRef ifscope;
+  NodeRef cond;
+  // If else branch is SIZE_MAX, then there are not else
+  // else if are representated as this elsebranch pointing towards an if node
+  NodeRef elsebranch;
+};
+
 struct AstNode {
   enum AstNodeType type;
   union {
@@ -81,6 +94,7 @@ struct AstNode {
     struct BinOpNode bin_op;
     struct BindingNode binding;
     struct ScopeNode scope;
+    struct IfStatementNode ifnode;
   };
 };
 

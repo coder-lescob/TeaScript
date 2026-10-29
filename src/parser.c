@@ -49,6 +49,8 @@ NodeRef parse_scope(struct Parser *parser, struct Lexer *lexer) {
   
   NodeRef statement;
   struct ScopeNode scope = { .scope = create_scope(parser) };
+  
+  bool scope_opened = false;
 
   while (1) {
     // reset the statement
@@ -63,14 +65,25 @@ NodeRef parse_scope(struct Parser *parser, struct Lexer *lexer) {
     else if (token.type == TOKEN_LET || token.type == TOKEN_CONST || token.type == TOKEN_STATIC) {
       statement = parse_binding(parser, lexer);
     }
+    else if (token.type == TOKEN_IF) {
+      statement = parse_if_statement(parser, lexer);
+    }
     else if (token.type == TOKEN_LCURLY) {
       lexer_ignore_token(lexer);
       statement = parse_scope(parser, lexer);
+      scope_opened = true;
     }
     else if (token.type == TOKEN_RCURLY) {
       token_free(&token);
-      lexer_ignore_token(lexer);
+      if (scope_opened) {
+        lexer_ignore_token(lexer);
+      }
+      scope_opened = false;
       break;
+    }
+    else if (scope_opened) {
+      TokenID false_curly = push_token(parser, &token);
+      statement = create_syntax_error(parser, (struct ErrNode) { .type = ERR_EXPECTED_RCURLY, .token = false_curly });
     }
     else {
       TokenID tok = push_token(parser, &token);
@@ -96,6 +109,83 @@ static enum BindingKind get_binding_kind(enum TokenType type) {
       fprintf(stderr, "Cannot create binding from token %s\n", get_token_type_str(type));
       abort();
   }
+}
+
+/**
+ * parses an if statement
+ */
+NodeRef parse_if_statement(struct Parser *parser, struct Lexer *lexer) {
+  struct Token if_tok = lexer_peek_token(lexer);
+  if (if_tok.type != TOKEN_IF) {
+    TokenID errtok = push_token(parser, &if_tok);
+    return create_syntax_error(parser, (struct ErrNode) { .type = ERR_EXPECTED_IF, .token = errtok });
+  }
+  token_free(&if_tok);
+  lexer_ignore_token(lexer);
+  
+  // get the condition
+  NodeRef cond = parse_expression(parser, lexer, 0.0f);
+  
+  struct Token lcurly = lexer_peek_token(lexer);
+  if (lcurly.type != TOKEN_LCURLY) {
+    TokenID false_curly = push_token(parser, &lcurly);
+    return create_syntax_error(parser, (struct ErrNode) { .type = ERR_EXPECTED_LCURLY, .token = false_curly });
+  }
+  token_free(&lcurly);
+  lexer_ignore_token(lexer);
+  
+  // parse the inside node
+  NodeRef ifscope = parse_scope(parser, lexer);
+
+  struct Token rcurly = lexer_peek_token(lexer);
+  if (rcurly.type != TOKEN_RCURLY) {
+    TokenID false_curly = push_token(parser, &rcurly);
+    return create_syntax_error(parser, (struct ErrNode) { .type = ERR_EXPECTED_RCURLY, .token = false_curly });
+  }
+  token_free(&rcurly);
+  lexer_ignore_token(lexer);
+  
+  // default no else
+  NodeRef elsebranch = SIZE_MAX;
+
+  // Is there an else?
+  struct Token else_tok = lexer_peek_token(lexer);
+  if (else_tok.type != TOKEN_ELSE) {
+    token_free(&else_tok);
+    goto done;
+  }
+  token_free(&else_tok);
+  lexer_ignore_token(lexer);
+
+  // Else branch found!
+  lcurly = lexer_peek_token(lexer);
+  if (lcurly.type == TOKEN_LCURLY) {
+    // good!
+    token_free(&lcurly);
+    lexer_ignore_token(lexer);
+    
+    // parse else as a scope
+    elsebranch = parse_scope(parser, lexer);
+
+    rcurly = lexer_peek_token(lexer);
+    if (rcurly.type != TOKEN_RCURLY) {
+      TokenID false_curly = push_token(parser, &rcurly);
+      return create_syntax_error(parser, (struct ErrNode) { .type = ERR_EXPECTED_LCURLY, .token = false_curly });
+    }
+    token_free(&rcurly);
+    lexer_ignore_token(lexer);
+    goto done;
+  }
+  else if (lcurly.type != TOKEN_IF) {
+    token_free(&lcurly);
+    goto done;
+  }
+  token_free(&lcurly);
+
+  // parse else as else if
+  elsebranch = parse_if_statement(parser, lexer);
+done:
+  return create_ifnode(parser, (struct IfStatementNode) { .ifscope = ifscope, .cond = cond, .elsebranch = elsebranch });
 }
 
 /**
@@ -202,7 +292,7 @@ NodeRef parse_expression(struct Parser *parser, struct Lexer *lexer, float bindi
   while (lhs != SIZE_MAX) {
     // get the operator without consuming it
     struct Token op = lexer_peek_token(lexer);
-    if (op.type == TOKEN_EOF || op.type == TOKEN_RPARENTHESES || op.type == TOKEN_SEMI_COLON) {
+    if (op.type == TOKEN_EOF || op.type == TOKEN_RPARENTHESES || op.type == TOKEN_SEMI_COLON || op.type == TOKEN_LCURLY) {
       // we're done!
       token_free(&op);
       break;
@@ -245,6 +335,7 @@ BindingPower get_binding_powers(enum TokenType type) {
     case TOKEN_SUB: return (BindingPower) { 1.0f, 1.1f };
     case TOKEN_MUL: 
     case TOKEN_DIV: return (BindingPower) { 2.0f, 2.1f };
+    case TOKEN_EQUALITY:  return (BindingPower) { 0.0f, 0.0f };
     default: return (BindingPower) { NAN, NAN };
   }
 }
@@ -253,8 +344,16 @@ BindingPower get_binding_powers(enum TokenType type) {
  * get the binary operator for any operator token
  */
 enum BinOp get_bin_op_for_op(enum TokenType type) {
-  // meh, no one cares  TODO: make checks
-  return type - TOKEN_ADD;
+  switch (type) {
+    case TOKEN_ADD: return OP_ADD;
+    case TOKEN_SUB: return OP_SUB;
+    case TOKEN_MUL: return OP_MUL;
+    case TOKEN_DIV: return OP_DIV;
+    case TOKEN_EQUALITY: return OP_EQ;
+    default:
+      fprintf(stderr, "bad operator\n");
+      abort();
+  }
 }
 
 /**********************************************************************************************
@@ -440,6 +539,15 @@ NodeRef create_scope_node(struct Parser *parser, struct ScopeNode scope) {
 }
 
 /**
+ * creates an if node, contains the entire if structure.
+ * NOTE: SIZE_MAX is used as an error sentinel
+ */
+NodeRef create_ifnode(struct Parser *parser, struct IfStatementNode ifnode) {
+  struct AstNode node = { .type = NODE_IF, .ifnode = ifnode };
+  return create_node(parser, &node);
+}
+
+/**
  * pushes a token to the token table and return it's index
  * NOTE: if it fails to push the token gets freed, but 
  * if it succeed the ownership of the token is for the token_table thus token is set to { NULL, TOKEN_ILLEGAL }
@@ -581,6 +689,37 @@ void display_ast(struct Parser *parser, struct AstNode *node, int level) {
           perror("Failed to get node inside of scope");
         }
       }
+      break;
+    case NODE_IF:
+      printf("Node::If\n");
+      
+      // get the condition and display it if valid
+      struct AstNode cond;
+      if (VEC_METHOD(get_item,AstNode)(&parser->nodes, node->ifnode.cond, &cond) == 0) {
+        display_ast(parser, &cond, level + 1);
+      }
+      else {
+        display_level(level + 1);
+        perror("Could not get condition");
+      }
+      
+      // get what to do if cond met
+      struct AstNode ifscope;
+      if (VEC_METHOD(get_item,AstNode)(&parser->nodes, node->ifnode.ifscope, &ifscope) == 0) {
+        display_ast(parser, &ifscope, level + 1);
+      }
+      else {
+        display_level(level + 1);
+        perror("Not scope found for If");
+      }
+
+      // get what to do otherwise
+      struct AstNode elsebranch;
+      if (node->ifnode.elsebranch != SIZE_MAX 
+        && VEC_METHOD(get_item,AstNode)(&parser->nodes, node->ifnode.elsebranch, &elsebranch) == 0) {
+        display_ast(parser, &elsebranch, level + 1);
+      }
+
       break;
     default:
       printf("Node::Unknown ( %d )\n", node->type);

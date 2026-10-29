@@ -64,6 +64,11 @@ struct Parser parse_lexer(struct Lexer *lexer);
 NodeRef parse_scope(struct Parser *parser, struct Lexer *lexer);
 
 /**
+ * parses an if statement
+ */
+NodeRef parse_if_statement(struct Parser *parser, struct Lexer *lexer);
+
+/**
  * parses a binding
  */
 NodeRef parse_binding(struct Parser *parser, struct Lexer *lexer);
@@ -161,6 +166,12 @@ int push_to_scope(struct Parser *parser, struct ScopeNode *node, NodeRef ref);
  * NOTE: SIZE_MAX is used as an error sentinel
  */
 NodeRef create_scope_node(struct Parser *parser, struct ScopeNode scope);
+
+/**
+ * creates an if node, contains the entire if structure.
+ * NOTE: SIZE_MAX is used as an error sentinel
+ */
+NodeRef create_ifnode(struct Parser *parser, struct IfStatementNode ifnode);
 
 /**
  * pushes a token to the token table and return it's index
